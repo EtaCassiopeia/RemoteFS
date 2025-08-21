@@ -1,0 +1,88 @@
+# RemoteFS FUSE Configuration Example
+# This configuration file demonstrates how to set up FUSE mounting for RemoteFS
+
+# Client configuration section
+[client]
+client_id = "fuse-client-1"
+
+# Connection settings
+[client.connection]
+heartbeat_interval = 30
+reconnection_attempts = 5
+reconnection_delay = 1000
+
+# Client behavior settings
+[client.client]
+request_timeout = 30
+max_retries = 3
+load_balancing = "round_robin"
+failover_strategy = "immediate"
+connection_pooling = true
+max_concurrent_requests = 100
+
+# Logging configuration
+[client.logging]
+level = "INFO"
+json_format = false
+file_path = "/var/log/remotefs/fuse-client.log"
+
+# Agent configurations
+[[client.agents]]
+id = "main-agent"
+url = "ws://192.168.1.100:8080"
+weight = 1
+enabled = true
+
+[[client.agents]]
+id = "backup-agent"  
+url = "ws://192.168.1.101:8080"
+weight = 1
+enabled = true
+
+# Mount point configurations
+[[mounts]]
+mount_path = "/mnt/remotefs/documents"
+remote_path = "/shared/documents"
+agent_id = "main-agent"
+
+[[mounts]]
+mount_path = "/mnt/remotefs/media"
+remote_path = "/shared/media"
+agent_id = "main-agent"
+
+# Mount-specific options for read-only access
+[mounts.options]
+read_only = true
+allow_other = true
+
+[[mounts]]
+mount_path = "/mnt/remotefs/backup"
+remote_path = "/backup"
+agent_id = "backup-agent"
+
+# Global FUSE mount options
+[fuse_options]
+uid = 1000
+gid = 1000
+allow_other = false
+allow_root = false
+fsname = "remotefs"
+subtype = "remotefs"
+auto_cache = true
+auto_unmount = true
+read_only = false
+exec = true
+suid = false
+dev = false
+atime = true
+default_permissions = true
+
+# Cache configuration
+[cache]
+attr_cache = true
+attr_timeout = 10
+entry_timeout = 10
+negative_timeout = 2
+max_entries = 10000
+write_through = true
+write_cache_size = 4194304  # 4MB

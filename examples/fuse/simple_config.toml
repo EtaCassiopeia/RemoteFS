@@ -1,0 +1,51 @@
+# Simple RemoteFS FUSE Configuration for Development
+# Minimal configuration for testing and development
+
+[client]
+client_id = "dev-fuse-client"
+
+[client.connection]
+heartbeat_interval = 30
+reconnection_attempts = 3
+reconnection_delay = 1000
+
+[client.client]
+request_timeout = 30
+max_retries = 2
+load_balancing = "round_robin"
+failover_strategy = "immediate"
+
+[client.logging]
+level = "DEBUG"
+json_format = false
+
+# Single agent for development
+[[client.agents]]
+id = "dev-agent"
+url = "ws://localhost:8080"
+weight = 1
+enabled = true
+
+# Single mount point for testing
+[[mounts]]
+mount_path = "/mnt/remotefs"
+remote_path = "/"
+agent_id = "dev-agent"
+
+# Basic FUSE options
+[fuse_options]
+fsname = "remotefs-dev"
+auto_cache = true
+auto_unmount = true
+read_only = false
+default_permissions = true
+
+# Basic cache configuration
+[cache]
+attr_cache = true
+attr_timeout = 5
+entry_timeout = 5
+negative_timeout = 1
+max_entries = 1000
+write_through = true
+write_cache_size = 1048576  # 1MB
