@@ -1,0 +1,75 @@
+# RemoteFS Client Configuration Example
+# This file shows all available configuration options
+
+# Agent configurations
+[[agents]]
+id = "primary-agent"
+url = "ws://localhost:8080"
+weight = 3
+enabled = true
+
+# Optional agent-specific authentication
+# [agents.auth]
+# method = "token"
+# [agents.auth.credentials]
+# token = "your-auth-token-here"
+
+[[agents]]
+id = "backup-agent"
+url = "ws://backup.example.com:8080"
+weight = 1
+enabled = true
+
+[[agents]]
+id = "secondary-agent"
+url = "wss://secure.example.com:8443"
+weight = 2
+enabled = false  # Disabled agent
+
+# Client behavior configuration
+[client]
+operation_timeout_ms = 30000      # 30 seconds
+max_retries = 3
+enable_failover = true
+read_buffer_size = 8192           # 8KB
+write_buffer_size = 8192          # 8KB
+
+# Retry strategy
+[client.retry_strategy]
+type = "exponential"
+base_delay_ms = 1000              # 1 second base delay
+max_delay_ms = 30000              # 30 seconds max delay
+
+# Load balancing strategy
+[client.load_balancing]
+type = "weighted_round_robin"     # Options: round_robin, weighted_round_robin, least_connections, random
+
+# Connection configuration
+[connection]
+connect_timeout_ms = 10000        # 10 seconds
+heartbeat_interval_ms = 30000     # 30 seconds
+max_message_size = 67108864       # 64MB
+enable_compression = false
+
+# Reconnection settings
+[connection.reconnection]
+enabled = true
+max_attempts = 5
+base_delay_ms = 1000              # 1 second
+max_delay_ms = 30000              # 30 seconds
+backoff_multiplier = 2.0
+
+# Global authentication (optional)
+# [auth]
+# method = "certificate"
+# [auth.credentials]
+# cert_path = "/path/to/client.crt"
+# key_path = "/path/to/client.key"
+
+# Logging configuration
+[logging]
+level = "info"                    # Options: trace, debug, info, warn, error
+format = "human"                  # Options: human, json
+enable_connection_logs = true
+enable_performance_logs = false
+# file = "/var/log/remotefs-client.log"  # Optional log file

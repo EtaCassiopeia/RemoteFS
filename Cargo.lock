@@ -1666,6 +1666,7 @@ dependencies = [
  "async-trait",
  "bincode",
  "bytes",
+ "chrono",
  "clap",
  "config",
  "dashmap",
@@ -1674,12 +1675,15 @@ dependencies = [
  "libc",
  "remotefs-common",
  "serde",
+ "serde_json",
  "thiserror 1.0.69",
  "tokio",
  "tokio-tungstenite 0.21.0",
+ "toml",
  "tracing",
  "tracing-subscriber",
  "url",
+ "uuid",
 ]
 
 [[package]]
