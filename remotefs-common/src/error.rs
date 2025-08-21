@@ -19,6 +19,9 @@ pub enum RemoteFsError {
     #[error("Authorization denied: {0}")]
     Authorization(String),
     
+    #[error("Access denied: {0}")]
+    AccessDenied(String),
+    
     #[error("File system error: {0}")]
     FileSystem(String),
     
@@ -68,6 +71,7 @@ impl RemoteFsError {
         match self {
             RemoteFsError::Authentication(_) => ErrorCode::AuthenticationFailed,
             RemoteFsError::Authorization(_) => ErrorCode::AccessDenied,
+            RemoteFsError::AccessDenied(_) => ErrorCode::AccessDenied,
             RemoteFsError::PermissionDenied(_) => ErrorCode::InsufficientPermissions,
             RemoteFsError::NotFound(_) => ErrorCode::FileNotFound,
             RemoteFsError::AlreadyExists(_) => ErrorCode::PathAlreadyExists,

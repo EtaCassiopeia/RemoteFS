@@ -10,6 +10,10 @@ repository.workspace = true
 name = "remotefs-agent"
 path = "src/main.rs"
 
+[lib]
+name = "remotefs_agent"
+path = "src/lib.rs"
+
 [dependencies]
 # Local dependencies
 remotefs-common = { path = "../remotefs-common" }
@@ -35,6 +39,8 @@ bincode = { workspace = true }
 config = { workspace = true }
 clap = { workspace = true }
 dirs = { workspace = true }
+toml = { workspace = true }
+num_cpus = { workspace = true }
 
 # Logging
 tracing = { workspace = true }
@@ -50,3 +56,7 @@ bytes = { workspace = true }
 dashmap = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+env_logger = { workspace = true }

@@ -13,6 +13,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, warn};
 
 /// Access control manager that enforces security policies
+#[derive(Clone)]
 pub struct AccessControl {
     config: AccessConfig,
     stats: Arc<RwLock<AccessControlStatistics>>,
@@ -309,7 +310,6 @@ fn clean_path(path: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use remotefs_common::config::AccessConfig;
     use std::fs;
     use tempfile::TempDir;
     

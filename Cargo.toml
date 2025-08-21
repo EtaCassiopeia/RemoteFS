@@ -72,6 +72,10 @@ chrono = { version = "0.4", features = ["serde"] }
 async-trait = "0.1"
 dashmap = "5.5"
 
+# Testing utilities
+tempfile = "3.8"
+env_logger = "0.10"
+
 
 # Profile configurations
 [profile.release]

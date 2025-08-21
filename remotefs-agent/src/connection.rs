@@ -330,39 +330,35 @@ impl ConnectionManager {
             
             // Filesystem operations
             Message::ReadFile { request_id, path, offset, length } => {
-                filesystem_handler.handle_read_file(request_id, path, offset, length).await
+                filesystem_handler.handle_read_file(request_id, path, Some(offset), Some(length as u64)).await
             }
             
-            Message::WriteFile { request_id, path, data, offset, create } => {
-                filesystem_handler.handle_write_file(request_id, path, data, offset, create).await
+            Message::WriteFile { request_id, path, data, offset, sync } => {
+                filesystem_handler.handle_write_file(request_id, path, data, Some(offset), sync).await
             }
             
             Message::ListDirectory { request_id, path } => {
                 filesystem_handler.handle_list_directory(request_id, path).await
             }
             
-            Message::GetMetadata { request_id, path } => {
-                filesystem_handler.handle_get_metadata(request_id, path).await
+            Message::GetMetadata { request_id, path, follow_symlinks } => {
+                filesystem_handler.handle_get_metadata(request_id, path, follow_symlinks).await
             }
             
-            Message::CreateDirectory { request_id, path, recursive } => {
-                filesystem_handler.handle_create_directory(request_id, path, recursive).await
+            Message::CreateDirectory { request_id, path, mode } => {
+                filesystem_handler.handle_create_directory(request_id, path, mode).await
             }
             
             Message::DeleteFile { request_id, path } => {
                 filesystem_handler.handle_delete_file(request_id, path).await
             }
             
-            Message::DeleteDirectory { request_id, path, recursive } => {
+            Message::RemoveDirectory { request_id, path, recursive } => {
                 filesystem_handler.handle_delete_directory(request_id, path, recursive).await
             }
             
-            Message::MoveFile { request_id, source_path, dest_path } => {
-                filesystem_handler.handle_move_file(request_id, source_path, dest_path).await
-            }
-            
-            Message::CopyFile { request_id, source_path, dest_path } => {
-                filesystem_handler.handle_copy_file(request_id, source_path, dest_path).await
+            Message::Rename { request_id, from_path, to_path } => {
+                filesystem_handler.handle_move_file(request_id, from_path, to_path).await
             }
             
             // Other messages that don't require responses

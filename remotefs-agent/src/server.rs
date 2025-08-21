@@ -48,7 +48,7 @@ impl AgentServer {
         let connection_manager = Arc::new(ConnectionManager::new(
             &config,
             config.agent_id.clone(),
-            public_key.clone(),
+            public_key.to_vec(),
         )?);
         
         Ok(Self {
@@ -59,8 +59,8 @@ impl AgentServer {
             access_control,
             shutdown_tx,
             shutdown_rx,
-            public_key,
-            private_key,
+            public_key: public_key.to_vec(),
+            private_key: private_key.to_vec(),
         })
     }
     

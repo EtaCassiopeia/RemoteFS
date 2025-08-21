@@ -178,7 +178,7 @@ impl FilesystemHandler {
         path: String,
         data: Vec<u8>,
         offset: Option<u64>,
-        create: bool,
+        sync: bool,
     ) -> Option<Message> {
         let operation_id = Uuid::new_v4();
         let start_time = SystemTime::now();
@@ -186,22 +186,24 @@ impl FilesystemHandler {
         // Track operation
         self.start_operation(operation_id, "write_file", &path).await;
         
-        let result = async {
-            // Check access permissions
-            if create {
-                self.access_control.check_create_access(&path).await?;
-            } else {
-                self.access_control.check_write_access(&path).await?;
-            }
-            
+        let result: Result<Message, RemoteFsError> = async {
+            // Check access permissions - for write operations, check write access
+            // If the file doesn't exist, we'll create it, so check create access too
             let path_buf = PathBuf::from(&path);
+            let file_exists = path_buf.exists();
+            
+            if file_exists {
+                self.access_control.check_write_access(&path).await?;
+            } else {
+                self.access_control.check_create_access(&path).await?;
+            }
             
             // Check file size limit
             let new_size = data.len() as u64 + offset.unwrap_or(0);
             self.access_control.check_file_size(new_size).await?;
             
-            // Create parent directory if it doesn't exist and create is true
-            if create {
+            // Create parent directory if it doesn't exist and file doesn't exist
+            if !file_exists {
                 if let Some(parent) = path_buf.parent() {
                     if !parent.exists() {
                         fs::create_dir_all(parent)
@@ -211,7 +213,7 @@ impl FilesystemHandler {
             }
             
             // Open file for writing
-            let mut file = if create {
+            let mut file = if !file_exists {
                 OpenOptions::new()
                     .create(true)
                     .write(true)
@@ -233,8 +235,8 @@ impl FilesystemHandler {
             file.write_all(&data)
                 .map_err(|e| RemoteFsError::FileSystem(format!("Failed to write file: {}", e)))?;
             
-            // Sync to disk if enabled
-            if self.performance_config.async_io {
+            // Sync to disk if requested
+            if sync {
                 file.sync_data()
                     .map_err(|e| RemoteFsError::FileSystem(format!("Failed to sync file: {}", e)))?;
             }
@@ -362,9 +364,10 @@ impl FilesystemHandler {
                 stats.total_operations += 1;
             }
             
-            Ok(Message::DirectoryListing {
+            Ok(Message::ListDirectoryResponse {
                 request_id,
-                entries: dir_entries,
+                success: true,
+                entries: Some(dir_entries),
                 error: None,
             })
         }.await;
@@ -376,9 +379,10 @@ impl FilesystemHandler {
             Ok(response) => Some(response),
             Err(e) => {
                 self.record_error().await;
-                Some(Message::DirectoryListing {
+                Some(Message::ListDirectoryResponse {
                     request_id,
-                    entries: vec![],
+                    success: false,
+                    entries: None,
                     error: Some(e.to_string()),
                 })
             }
@@ -390,6 +394,7 @@ impl FilesystemHandler {
         &self,
         request_id: Uuid,
         path: String,
+        _follow_symlinks: bool,
     ) -> Option<Message> {
         let operation_id = Uuid::new_v4();
         let start_time = SystemTime::now();
@@ -414,20 +419,26 @@ impl FilesystemHandler {
             
             let file_metadata = FileMetadata {
                 size: metadata.len(),
-                is_directory: metadata.is_dir(),
-                is_readonly: metadata.permissions().readonly(),
                 modified: metadata.modified()
-                    .and_then(|t| t.duration_since(UNIX_EPOCH))
-                    .map(|d| d.as_secs())
-                    .unwrap_or(0),
-                accessed: metadata.accessed()
-                    .and_then(|t| t.duration_since(UNIX_EPOCH))
-                    .map(|d| d.as_secs())
-                    .unwrap_or(0),
+                    .map(|st| DateTime::from_timestamp(st.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64, 0).unwrap_or_default())
+                    .unwrap_or_default(),
                 created: metadata.created()
-                    .and_then(|t| t.duration_since(UNIX_EPOCH))
-                    .map(|d| d.as_secs())
-                    .unwrap_or(0),
+                    .map(|st| DateTime::from_timestamp(st.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64, 0).unwrap_or_default())
+                    .unwrap_or_default(),
+                accessed: metadata.accessed()
+                    .map(|st| DateTime::from_timestamp(st.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64, 0).unwrap_or_default())
+                    .unwrap_or_default(),
+                permissions: metadata.permissions().mode(),
+                uid: 0, // Default for cross-platform compatibility
+                gid: 0, // Default for cross-platform compatibility
+                is_dir: metadata.is_dir(),
+                is_file: metadata.is_file(),
+                is_symlink: metadata.is_symlink(),
+                symlink_target: if metadata.is_symlink() {
+                    path_buf.read_link().ok().and_then(|p| p.to_str().map(|s| s.to_string()))
+                } else {
+                    None
+                },
             };
             
             // Update statistics
@@ -436,9 +447,10 @@ impl FilesystemHandler {
                 stats.total_operations += 1;
             }
             
-            Ok(Message::FileInfo {
+            Ok(Message::GetMetadataResponse {
                 request_id,
-                metadata: file_metadata,
+                success: true,
+                metadata: Some(file_metadata),
                 error: None,
             })
         }.await;
@@ -450,16 +462,10 @@ impl FilesystemHandler {
             Ok(response) => Some(response),
             Err(e) => {
                 self.record_error().await;
-                Some(Message::FileInfo {
+                Some(Message::GetMetadataResponse {
                     request_id,
-                    metadata: FileMetadata {
-                        size: 0,
-                        is_directory: false,
-                        is_readonly: false,
-                        modified: 0,
-                        accessed: 0,
-                        created: 0,
-                    },
+                    success: false,
+                    metadata: None,
                     error: Some(e.to_string()),
                 })
             }
@@ -471,7 +477,7 @@ impl FilesystemHandler {
         &self,
         request_id: Uuid,
         path: String,
-        recursive: bool,
+        mode: u32,
     ) -> Option<Message> {
         let operation_id = Uuid::new_v4();
         let start_time = SystemTime::now();
@@ -479,18 +485,15 @@ impl FilesystemHandler {
         // Track operation
         self.start_operation(operation_id, "create_directory", &path).await;
         
-        let result = async {
+        let result: Result<Message, RemoteFsError> = async {
             // Check access permissions
             self.access_control.check_create_access(&path).await?;
             
             let path_buf = PathBuf::from(&path);
             
-            // Create directory
-            let result = if recursive {
-                fs::create_dir_all(&path_buf)
-            } else {
-                fs::create_dir(&path_buf)
-            };
+            // Create directory with specified mode
+            // For simplicity, we'll create directories recursively based on mode
+            let result = fs::create_dir_all(&path_buf);
             
             result.map_err(|e| RemoteFsError::FileSystem(format!("Failed to create directory: {}", e)))?;
             
@@ -500,9 +503,10 @@ impl FilesystemHandler {
                 stats.total_operations += 1;
             }
             
-            Ok(Message::OperationResult {
+            Ok(Message::CreateDirectoryResponse {
                 request_id,
                 success: true,
+                metadata: None,
                 error: None,
             })
         }.await;
@@ -514,9 +518,10 @@ impl FilesystemHandler {
             Ok(response) => Some(response),
             Err(e) => {
                 self.record_error().await;
-                Some(Message::OperationResult {
+                Some(Message::CreateDirectoryResponse {
                     request_id,
                     success: false,
+                    metadata: None,
                     error: Some(e.to_string()),
                 })
             }
@@ -560,7 +565,7 @@ impl FilesystemHandler {
                 stats.total_operations += 1;
             }
             
-            Ok(Message::OperationResult {
+            Ok(Message::DeleteFileResponse {
                 request_id,
                 success: true,
                 error: None,
@@ -574,7 +579,7 @@ impl FilesystemHandler {
             Ok(response) => Some(response),
             Err(e) => {
                 self.record_error().await;
-                Some(Message::OperationResult {
+                Some(Message::DeleteFileResponse {
                     request_id,
                     success: false,
                     error: Some(e.to_string()),
@@ -626,7 +631,7 @@ impl FilesystemHandler {
                 stats.total_operations += 1;
             }
             
-            Ok(Message::OperationResult {
+            Ok(Message::RemoveDirectoryResponse {
                 request_id,
                 success: true,
                 error: None,
@@ -640,7 +645,7 @@ impl FilesystemHandler {
             Ok(response) => Some(response),
             Err(e) => {
                 self.record_error().await;
-                Some(Message::OperationResult {
+                Some(Message::RemoveDirectoryResponse {
                     request_id,
                     success: false,
                     error: Some(e.to_string()),
@@ -694,7 +699,7 @@ impl FilesystemHandler {
                 stats.total_operations += 1;
             }
             
-            Ok(Message::OperationResult {
+            Ok(Message::RenameResponse {
                 request_id,
                 success: true,
                 error: None,
@@ -708,7 +713,7 @@ impl FilesystemHandler {
             Ok(response) => Some(response),
             Err(e) => {
                 self.record_error().await;
-                Some(Message::OperationResult {
+                Some(Message::RenameResponse {
                     request_id,
                     success: false,
                     error: Some(e.to_string()),
@@ -780,9 +785,10 @@ impl FilesystemHandler {
                 perf_stats.bytes_written += file_size;
             }
             
-            Ok(Message::OperationResult {
+            Ok(Message::CreateFileResponse {
                 request_id,
                 success: true,
+                metadata: None,
                 error: None,
             })
         }.await;
@@ -794,9 +800,10 @@ impl FilesystemHandler {
             Ok(response) => Some(response),
             Err(e) => {
                 self.record_error().await;
-                Some(Message::OperationResult {
+                Some(Message::CreateFileResponse {
                     request_id,
                     success: false,
+                    metadata: None,
                     error: Some(e.to_string()),
                 })
             }
