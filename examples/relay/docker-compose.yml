@@ -1,0 +1,212 @@
+# RemoteFS Relay Server Docker Compose Configuration
+# This sets up a complete RemoteFS infrastructure with relay, agents, and monitoring
+
+version: '3.8'
+
+services:
+  # RemoteFS Relay Server
+  remotefs-relay:
+    build:
+      context: ../../
+      dockerfile: remotefs-relay/Dockerfile
+    container_name: remotefs-relay
+    ports:
+      - "9090:9090"  # Relay server port
+      - "9091:9091"  # Metrics port
+    environment:
+      - RELAY_AUTH_SECRET=${RELAY_AUTH_SECRET:-dev-secret-key}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - RUST_LOG=info
+    volumes:
+      - ./relay_config.toml:/etc/remotefs/relay.toml:ro
+      - relay_logs:/var/log/remotefs
+    depends_on:
+      - redis
+      - consul
+    networks:
+      - remotefs-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis for relay state storage
+  redis:
+    image: redis:7-alpine
+    container_name: remotefs-redis
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - remotefs-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Consul for service discovery
+  consul:
+    image: consul:1.16
+    container_name: remotefs-consul
+    ports:
+      - "8500:8500"  # HTTP API
+      - "8600:8600/udp"  # DNS
+    environment:
+      - CONSUL_BIND_INTERFACE=eth0
+    volumes:
+      - consul_data:/consul/data
+      - ./consul.json:/consul/config/consul.json:ro
+    networks:
+      - remotefs-network
+    restart: unless-stopped
+    command: >
+      consul agent -server -bootstrap-expect=1 -ui -client=0.0.0.0
+      -config-file=/consul/config/consul.json
+    healthcheck:
+      test: ["CMD", "consul", "members"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Sample RemoteFS Agent 1
+  remotefs-agent-1:
+    build:
+      context: ../../
+      dockerfile: remotefs-agent/Dockerfile
+    container_name: remotefs-agent-1
+    environment:
+      - AGENT_ID=agent-1
+      - BIND_ADDRESS=0.0.0.0
+      - BIND_PORT=8080
+      - ROOT_PATH=/shared/agent1
+      - CONSUL_ADDRESS=consul:8500
+      - RUST_LOG=info
+    volumes:
+      - ./agent1_config.toml:/etc/remotefs/agent.toml:ro
+      - agent1_data:/shared/agent1
+      - agent_logs:/var/log/remotefs
+    depends_on:
+      - consul
+    networks:
+      - remotefs-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Sample RemoteFS Agent 2
+  remotefs-agent-2:
+    build:
+      context: ../../
+      dockerfile: remotefs-agent/Dockerfile
+    container_name: remotefs-agent-2
+    environment:
+      - AGENT_ID=agent-2
+      - BIND_ADDRESS=0.0.0.0
+      - BIND_PORT=8080
+      - ROOT_PATH=/shared/agent2
+      - CONSUL_ADDRESS=consul:8500
+      - RUST_LOG=info
+    volumes:
+      - ./agent2_config.toml:/etc/remotefs/agent.toml:ro
+      - agent2_data:/shared/agent2
+      - agent_logs:/var/log/remotefs
+    depends_on:
+      - consul
+    networks:
+      - remotefs-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: remotefs-prometheus
+    ports:
+      - "9092:9090"  # Avoid conflict with relay port
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - remotefs-network
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+
+  # Grafana for metrics visualization
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: remotefs-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - remotefs-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+  # Nginx as a reverse proxy and load balancer
+  nginx:
+    image: nginx:alpine
+    container_name: remotefs-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/ssl:ro
+    networks:
+      - remotefs-network
+    restart: unless-stopped
+    depends_on:
+      - remotefs-relay
+
+networks:
+  remotefs-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  relay_logs:
+    driver: local
+  redis_data:
+    driver: local
+  consul_data:
+    driver: local
+  agent1_data:
+    driver: local
+  agent2_data:
+    driver: local
+  agent_logs:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local

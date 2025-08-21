@@ -1,0 +1,56 @@
+# Simple RemoteFS Relay Configuration for Development
+# Minimal configuration suitable for testing and development
+
+[server]
+server_id = "dev-relay"
+bind_address = "127.0.0.1"
+port = 9090
+max_connections = 100
+connection_timeout = 60
+
+[server.tls]
+enabled = false
+
+[routing]
+default_strategy = "round_robin"
+health_check_interval = 60
+max_failed_health_checks = 2
+sticky_sessions = false
+
+[authentication]
+enabled = false
+
+[logging]
+level = "debug"
+format = "pretty"
+log_requests = true
+log_metrics = false
+
+[metrics]
+enabled = true
+bind_address = "127.0.0.1"
+port = 9091
+
+[agents]
+discovery_method = "static"
+
+# Single agent for development
+[[agents.static]]
+id = "dev-agent"
+address = "127.0.0.1:8080"
+weight = 10
+enabled = true
+
+[load_balancing.circuit_breaker]
+enabled = false
+
+[load_balancing.rate_limit]
+enabled = false
+
+[storage]
+type = "memory"
+
+[performance]
+worker_threads = 0
+tcp_nodelay = true
+tcp_keepalive = false

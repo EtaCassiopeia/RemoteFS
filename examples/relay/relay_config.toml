@@ -1,0 +1,181 @@
+# RemoteFS Relay Server Configuration
+# This configuration sets up a relay server that routes messages between clients and agents
+
+[server]
+# Server identification
+server_id = "relay-1"
+# Bind address and port
+bind_address = "0.0.0.0"
+port = 9090
+# Maximum number of concurrent connections
+max_connections = 1000
+# Connection timeout in seconds
+connection_timeout = 300
+
+[server.tls]
+# Enable TLS/SSL (recommended for production)
+enabled = false
+# Path to certificate file (required if TLS is enabled)
+cert_file = "/etc/ssl/certs/remotefs-relay.crt"
+# Path to private key file (required if TLS is enabled)  
+key_file = "/etc/ssl/private/remotefs-relay.key"
+# Minimum TLS version (1.2 or 1.3)
+min_version = "1.2"
+
+[routing]
+# Default routing strategy for load balancing
+default_strategy = "round_robin"  # Options: round_robin, least_connections, weighted, hash
+# Health check interval in seconds
+health_check_interval = 30
+# Number of failed health checks before marking agent as unavailable
+max_failed_health_checks = 3
+# Enable sticky sessions (route same client to same agent)
+sticky_sessions = false
+# Session timeout for sticky sessions (in seconds)
+session_timeout = 3600
+
+[authentication]
+# Enable authentication (recommended for production)
+enabled = false
+# Authentication method: "token", "certificate", or "none"
+method = "token"
+# Token validation settings (when method = "token")
+[authentication.token]
+# Secret key for token validation (change this!)
+secret_key = "your-secret-key-here"
+# Token expiration time in seconds
+expiration = 86400
+# Allow token refresh
+allow_refresh = true
+
+[logging]
+# Log level: trace, debug, info, warn, error
+level = "info"
+# Log format: "pretty" for human-readable, "json" for structured
+format = "pretty"
+# Log file path (optional, logs to stdout if not specified)
+file_path = "/var/log/remotefs/relay.log"
+# Enable request logging
+log_requests = true
+# Enable performance metrics logging
+log_metrics = true
+
+[metrics]
+# Enable metrics collection
+enabled = true
+# Metrics bind address
+bind_address = "127.0.0.1"
+# Metrics port
+port = 9091
+# Metrics endpoint path
+endpoint = "/metrics"
+# Enable detailed connection metrics
+detailed_metrics = true
+
+[agents]
+# Agent discovery method: "static", "consul", "etcd", or "dns"
+discovery_method = "static"
+
+# Static agent configuration (when discovery_method = "static")
+[[agents.static]]
+id = "agent-1"
+address = "192.168.1.100:8080"
+weight = 10
+enabled = true
+# Agent-specific metadata
+[agents.static.metadata]
+region = "us-east-1"
+datacenter = "dc1"
+capabilities = ["read", "write", "admin"]
+
+[[agents.static]]
+id = "agent-2" 
+address = "192.168.1.101:8080"
+weight = 8
+enabled = true
+[agents.static.metadata]
+region = "us-east-1"
+datacenter = "dc1"
+capabilities = ["read", "write"]
+
+[[agents.static]]
+id = "agent-backup"
+address = "192.168.1.102:8080"
+weight = 5
+enabled = true
+[agents.static.metadata]
+region = "us-west-1"
+datacenter = "dc2"
+capabilities = ["read"]
+
+# Consul discovery settings (when discovery_method = "consul")
+[agents.consul]
+# Consul address
+address = "127.0.0.1:8500"
+# Service name to discover
+service_name = "remotefs-agent"
+# Consul datacenter
+datacenter = "dc1"
+# Health check passing required
+require_passing = true
+# Discovery interval in seconds
+interval = 30
+
+[load_balancing]
+# Global load balancing settings
+# Circuit breaker settings
+[load_balancing.circuit_breaker]
+enabled = true
+# Failure threshold before opening circuit
+failure_threshold = 5
+# Recovery timeout in seconds
+recovery_timeout = 60
+# Half-open state request limit
+half_open_limit = 3
+
+# Rate limiting settings
+[load_balancing.rate_limit]
+enabled = true
+# Requests per second per client
+requests_per_second = 100
+# Burst capacity
+burst_size = 200
+
+[storage]
+# Relay state storage (for session persistence, metrics, etc.)
+# Storage type: "memory", "redis", "file"
+type = "memory"
+
+# Redis storage settings (when type = "redis")
+[storage.redis]
+address = "127.0.0.1:6379"
+database = 0
+password = ""
+# Connection pool settings
+max_connections = 10
+idle_timeout = 300
+
+# File storage settings (when type = "file")
+[storage.file]
+directory = "/var/lib/remotefs/relay"
+# Enable compression
+compress = true
+# Cleanup interval in seconds
+cleanup_interval = 3600
+
+[performance]
+# Performance tuning settings
+# Worker thread count (0 = auto-detect based on CPU cores)
+worker_threads = 0
+# Max blocking threads for file I/O operations
+max_blocking_threads = 16
+# Enable TCP_NODELAY for low latency
+tcp_nodelay = true
+# TCP keep-alive settings
+tcp_keepalive = true
+# Keep-alive idle time in seconds
+keepalive_idle = 600
+# Keep-alive interval in seconds  
+keepalive_interval = 60
+# Keep-alive probe count
+keepalive_count = 9
