@@ -1,0 +1,38 @@
+# Minimal RemoteFS Agent Configuration
+# This is the simplest configuration to get started
+
+# Required: Unique identifier for this agent
+agent_id = "my-first-agent"
+
+# Required: URL of the relay server to connect to
+relay_url = "ws://localhost:8080/ws"
+
+# Access Control - Define which directories to share
+[access]
+# At least one directory must be specified
+allowed_paths = [
+    "~/Documents",     # User's Documents folder
+    "~/Downloads"      # User's Downloads folder
+]
+
+# Maximum file size in bytes (10 MB)
+max_file_size = 10485760
+
+# Security Settings - Minimal for development/testing
+[security]
+# Disable TLS for local testing (NOT recommended for production)
+enable_tls = false
+
+# Disable authentication for local testing (NOT recommended for production)
+enable_auth = false
+
+# Logging - Basic settings
+[logging]
+# Log level for development
+level = "info"
+
+# Use text format for easier reading during development
+format = "text"
+
+# Log to console only (no file logging)
+# file = "/path/to/logfile" # Uncomment to enable file logging

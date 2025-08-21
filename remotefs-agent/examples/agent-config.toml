@@ -1,0 +1,137 @@
+# RemoteFS Agent Configuration Example
+# This file demonstrates all available configuration options
+
+# Basic Agent Settings
+agent_id = "example-agent-001"
+relay_url = "wss://relay.example.com:8080/ws"
+
+# Access Control Configuration
+[access]
+# Directories that the agent can serve files from
+allowed_paths = [
+    "/home/user/shared",
+    "/opt/data",
+    "/var/www/public"
+]
+
+# Directories within allowed paths that are read-only
+read_only_paths = [
+    "/opt/data/readonly",
+    "/var/www/public/archives"
+]
+
+# Directories that are explicitly denied (takes precedence)
+denied_paths = [
+    "/etc",
+    "/root",
+    "/sys",
+    "/proc",
+    "/home/user/.ssh"
+]
+
+# Maximum file size in bytes (100 MB)
+max_file_size = 104857600
+
+# Whether to follow symbolic links
+follow_symlinks = false
+
+# File extensions that are allowed (empty = allow all)
+allowed_extensions = [
+    "txt", "md", "pdf", "docx", "xlsx", "pptx",
+    "jpg", "jpeg", "png", "gif", "svg", "webp",
+    "mp4", "avi", "mkv", "mp3", "wav", "flac",
+    "zip", "tar", "gz", "7z", "json", "xml", "csv"
+]
+
+# File extensions that are explicitly denied
+denied_extensions = [
+    "exe", "bat", "cmd", "scr", "msi", "com", "pif",
+    "vbs", "js", "jar", "sh", "ps1", "py", "pl"
+]
+
+# Security Configuration
+[security]
+# Path to private key file (generated automatically if not exists)
+key_file = "~/.remotefs/agent.key"
+
+# Path to certificate file
+cert_file = "~/.remotefs/agent.crt"
+
+# Enable TLS encryption for connections
+enable_tls = true
+
+# Verify client certificates
+verify_certs = true
+
+# Session timeout in seconds (1 hour)
+session_timeout = 3600
+
+# Enable client authentication
+enable_auth = true
+
+# List of allowed client IDs (empty = allow all authenticated clients)
+allowed_clients = [
+    "client-workstation-001",
+    "client-server-prod",
+    "backup-service"
+]
+
+# Network Configuration
+[network]
+# Connection timeout in seconds
+connection_timeout = 30
+
+# Heartbeat interval in seconds
+heartbeat_interval = 60
+
+# Maximum message size in bytes (64 MB)
+max_message_size = 67108864
+
+# Reconnection interval in seconds
+reconnect_interval = 5
+
+# Maximum reconnection attempts (0 = unlimited)
+max_reconnect_attempts = 10
+
+# Logging Configuration
+[logging]
+# Log level: trace, debug, info, warn, error
+level = "info"
+
+# Log format: text or json
+format = "json"
+
+# Main log file path (if not specified, logs to stdout)
+file = "/var/log/remotefs/agent.log"
+
+# Maximum log file size in MB
+max_file_size = 10
+
+# Maximum number of log files to keep
+max_files = 5
+
+# Enable access logging
+enable_access_log = true
+
+# Access log file path
+access_log_file = "/var/log/remotefs/access.log"
+
+# Performance Configuration
+[performance]
+# Number of worker threads (0 = auto-detect based on CPU cores)
+worker_threads = 4
+
+# I/O buffer size in bytes
+io_buffer_size = 65536
+
+# Enable asynchronous I/O operations
+async_io = true
+
+# Filesystem cache size (number of entries)
+fs_cache_size = 128
+
+# Enable read-ahead prefetching
+enable_prefetch = true
+
+# Number of blocks to prefetch
+prefetch_window = 8

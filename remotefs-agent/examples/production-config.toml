@@ -1,0 +1,140 @@
+# Production RemoteFS Agent Configuration
+# This configuration is designed for production deployments with security best practices
+
+# Agent identification - Use descriptive, unique IDs in production
+agent_id = "prod-fileserver-01"
+
+# Production relay server with TLS
+relay_url = "wss://relay.company.com:8443/ws"
+
+# Access Control - Restrictive production settings
+[access]
+# Only serve specific business directories
+allowed_paths = [
+    "/srv/shared/documents",
+    "/srv/shared/projects",
+    "/opt/backups/safe"
+]
+
+# Some directories are read-only for safety
+read_only_paths = [
+    "/opt/backups/safe"
+]
+
+# Explicitly deny sensitive system directories
+denied_paths = [
+    "/etc", "/root", "/sys", "/proc", "/boot",
+    "/usr/bin", "/usr/sbin", "/var/log",
+    "/home/admin/.ssh", "/root/.ssh"
+]
+
+# Restrict file size to prevent abuse (50 MB)
+max_file_size = 52428800
+
+# Never follow symlinks in production for security
+follow_symlinks = false
+
+# Only allow safe file types
+allowed_extensions = [
+    # Documents
+    "txt", "md", "pdf", "docx", "xlsx", "pptx", "odt", "ods", "odp",
+    # Images
+    "jpg", "jpeg", "png", "gif", "svg", "webp", "tiff", "bmp",
+    # Archives (scanned by security tools)
+    "zip", "tar", "gz", "bz2", "7z",
+    # Data formats
+    "json", "xml", "csv", "yaml", "yml"
+]
+
+# Block all executable and script files
+denied_extensions = [
+    "exe", "msi", "bat", "cmd", "scr", "com", "pif",
+    "vbs", "js", "jar", "sh", "ps1", "py", "pl", "rb",
+    "php", "jsp", "asp", "aspx", "dll", "so"
+]
+
+# Security Configuration - Production hardening
+[security]
+# Use dedicated certificate directory with restricted permissions
+key_file = "/etc/remotefs/ssl/agent.key"
+cert_file = "/etc/remotefs/ssl/agent.crt"
+
+# Always use TLS in production
+enable_tls = true
+
+# Always verify certificates
+verify_certs = true
+
+# Shorter session timeout for security (30 minutes)
+session_timeout = 1800
+
+# Always require authentication
+enable_auth = true
+
+# Whitelist of allowed client IDs
+allowed_clients = [
+    "backup-system",
+    "admin-workstation-1",
+    "admin-workstation-2",
+    "monitoring-system"
+]
+
+# Network Configuration - Production tuning
+[network]
+# Longer timeout for production networks
+connection_timeout = 60
+
+# More frequent heartbeats for better monitoring
+heartbeat_interval = 30
+
+# Larger message size for better performance
+max_message_size = 134217728  # 128 MB
+
+# Quick reconnection for high availability
+reconnect_interval = 3
+
+# Limited reconnection attempts to prevent resource exhaustion
+max_reconnect_attempts = 5
+
+# Logging Configuration - Production monitoring
+[logging]
+# Info level for production (not too verbose, but informative)
+level = "info"
+
+# JSON format for log aggregation systems
+format = "json"
+
+# Dedicated log directory with rotation
+file = "/var/log/remotefs/agent.log"
+
+# Smaller log files with more retention for analysis
+max_file_size = 5
+
+# Keep more log files for compliance/debugging
+max_files = 20
+
+# Always enable access logging in production
+enable_access_log = true
+
+# Separate access log for security monitoring
+access_log_file = "/var/log/remotefs/access.log"
+
+# Performance Configuration - Production optimization
+[performance]
+# Match server CPU cores
+worker_threads = 8
+
+# Larger buffer for better throughput
+io_buffer_size = 131072
+
+# Always use async I/O in production
+async_io = true
+
+# Larger cache for frequently accessed files
+fs_cache_size = 256
+
+# Enable prefetching for better performance
+enable_prefetch = true
+
+# Larger prefetch window for sequential reads
+prefetch_window = 16
