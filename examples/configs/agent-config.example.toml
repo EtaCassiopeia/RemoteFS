@@ -1,0 +1,166 @@
+# RemoteFS Agent Configuration
+# This is an example configuration file for the RemoteFS agent.
+# Copy this file to a secure location and customize it for your setup.
+
+# Unique identifier for this agent (must be unique across all agents)
+agent_id = "agent-example-001"
+
+# URL of the relay server to connect to
+# Use wss:// for secure connections (recommended for production)
+# Use ws:// only for local development or testing
+relay_url = "wss://relay.example.com:8080/ws"
+
+# Access control configuration
+[access]
+# List of directory paths that this agent can serve
+# These paths must exist and be readable by the agent process
+allowed_paths = [
+    "/home/shared",
+    "/var/data/public",
+    "/tmp/remotefs"
+]
+
+# Paths that are read-only (optional)
+read_only_paths = [
+    "/home/shared/readonly"
+]
+
+# Paths that are explicitly denied access (optional)
+# Denied paths take precedence over allowed paths
+denied_paths = [
+    "/etc",
+    "/root",
+    "/home/shared/private"
+]
+
+# Maximum file size that can be accessed (in bytes)
+# Default: 10GB
+max_file_size = 10737418240
+
+# Whether to follow symbolic links
+# Default: true
+follow_symlinks = true
+
+# Allowed file extensions (empty list means all extensions allowed)
+# Example: ["txt", "pdf", "jpg", "png"]
+allowed_extensions = []
+
+# Denied file extensions
+# Example: ["exe", "bat", "sh"]
+denied_extensions = ["exe", "bat", "sh"]
+
+# Security configuration
+[security]
+# Path to the private key file for authentication
+# This file will be generated if it doesn't exist
+key_file = "~/.config/remotefs/agent.key"
+
+# Path to the certificate file (optional)
+cert_file = "~/.config/remotefs/agent.crt"
+
+# Enable TLS for connections (recommended: true)
+enable_tls = true
+
+# Verify TLS certificates (recommended: true)
+verify_certs = true
+
+# Session timeout in seconds (default: 1 hour)
+session_timeout = 3600
+
+# Enable authentication (recommended: true)
+enable_auth = true
+
+# List of allowed client certificates for mutual TLS (optional)
+allowed_clients = []
+
+# Network configuration
+[network]
+# Connection timeout in seconds
+connection_timeout = 30
+
+# Read timeout in seconds
+read_timeout = 60
+
+# Write timeout in seconds
+write_timeout = 60
+
+# Heartbeat interval in seconds
+heartbeat_interval = 30
+
+# Maximum number of reconnection attempts
+max_reconnect_attempts = 5
+
+# Base reconnection backoff time in seconds
+reconnect_backoff_base = 1
+
+# Maximum concurrent connections
+max_concurrent_connections = 10
+
+# Enable TCP keep-alive
+tcp_keepalive = true
+
+# TCP keep-alive interval in seconds
+keepalive_interval = 60
+
+# Performance configuration
+[performance]
+# Number of worker threads (0 = auto-detect)
+worker_threads = 0
+
+# I/O buffer size in bytes
+io_buffer_size = 65536
+
+# Enable asynchronous I/O
+async_io = true
+
+# File system cache size in MB
+fs_cache_size = 256
+
+# Enable prefetching for better performance
+enable_prefetch = true
+
+# Prefetch window size
+prefetch_window = 8
+
+# Logging configuration
+[logging]
+# Log level: trace, debug, info, warn, error
+level = "info"
+
+# Log format: plain or json
+format = "plain"
+
+# Log file path (optional, defaults to stdout)
+# file = "/var/log/remotefs/agent.log"
+
+# Maximum log file size in MB
+max_file_size = 100
+
+# Maximum number of log files to keep
+max_files = 5
+
+# Enable access logging
+enable_access_log = false
+
+# Access log file path (optional)
+# access_log_file = "/var/log/remotefs/access.log"
+
+# Example configurations for different use cases:
+
+# Development setup (less secure, more verbose):
+# [logging]
+# level = "debug"
+# [security]
+# enable_tls = false
+# verify_certs = false
+
+# Production setup (maximum security):
+# [logging]
+# level = "warn"
+# file = "/var/log/remotefs/agent.log"
+# [security]
+# enable_tls = true
+# verify_certs = true
+# [access]
+# follow_symlinks = false
+# denied_extensions = ["exe", "bat", "sh", "ps1", "cmd"]
