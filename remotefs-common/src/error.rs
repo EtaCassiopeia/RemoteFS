@@ -5,7 +5,7 @@ use crate::protocol::ErrorCode;
 #[derive(Error, Debug)]
 pub enum RemoteFsError {
     #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
+    Io(std::io::Error),
     
     #[error("Serialization error: {0}")]
     Serialization(#[from] bincode::Error),

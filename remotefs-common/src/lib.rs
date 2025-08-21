@@ -20,7 +20,7 @@ pub use protocol::{
 };
 
 pub use crypto::{
-    EncryptionManager, SessionManager, EncryptedData, KeyExchange,
+    EncryptionManager, EncryptedData, KeyExchange,
     generate_key, generate_keypair, derive_key_from_password,
     KeyContext, KEY_SIZE, X25519_KEY_SIZE, NONCE_SIZE, MAX_CHUNK_SIZE,
 };
@@ -32,6 +32,7 @@ pub use config::{
     CacheConfig, AccessConfig, SecurityConfig, NetworkConfig, 
     MessageLimits, SessionConfig, StorageConfig, PerformanceConfig,
     LoggingConfig, load_config, save_config,
+    load_client_config, load_agent_config, load_relay_config,
 };
 
 /// Version information

@@ -490,3 +490,42 @@ where
         
     Ok(())
 }
+
+/// Load client configuration from file
+pub fn load_client_config<P: AsRef<std::path::Path>>(path: P) -> crate::error::Result<ClientConfig> {
+    let content = std::fs::read_to_string(path.as_ref())
+        .map_err(|e| crate::error::RemoteFsError::Configuration(
+            format!("Failed to read client config: {}", e)
+        ))?;
+        
+    toml::from_str(&content)
+        .map_err(|e| crate::error::RemoteFsError::Configuration(
+            format!("Failed to parse client config: {}", e)
+        ))
+}
+
+/// Load agent configuration from file
+pub fn load_agent_config<P: AsRef<std::path::Path>>(path: P) -> crate::error::Result<AgentConfig> {
+    let content = std::fs::read_to_string(path.as_ref())
+        .map_err(|e| crate::error::RemoteFsError::Configuration(
+            format!("Failed to read agent config: {}", e)
+        ))?;
+        
+    toml::from_str(&content)
+        .map_err(|e| crate::error::RemoteFsError::Configuration(
+            format!("Failed to parse agent config: {}", e)
+        ))
+}
+
+/// Load relay configuration from file
+pub fn load_relay_config<P: AsRef<std::path::Path>>(path: P) -> crate::error::Result<RelayConfig> {
+    let content = std::fs::read_to_string(path.as_ref())
+        .map_err(|e| crate::error::RemoteFsError::Configuration(
+            format!("Failed to read relay config: {}", e)
+        ))?;
+        
+    toml::from_str(&content)
+        .map_err(|e| crate::error::RemoteFsError::Configuration(
+            format!("Failed to parse relay config: {}", e)
+        ))
+}
