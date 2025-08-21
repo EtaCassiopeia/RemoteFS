@@ -1,0 +1,55 @@
+[package]
+name = "remotefs-relay"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "remotefs-relay"
+path = "src/main.rs"
+
+[dependencies]
+# Local dependencies
+remotefs-common = { path = "../remotefs-common" }
+
+# Async
+tokio = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+# Web server
+axum = "0.7"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+hyper = "1.0"
+
+# Networking
+tokio-tungstenite = { workspace = true }
+url = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+bincode = { workspace = true }
+
+# Configuration
+config = { workspace = true }
+clap = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Utilities
+bytes = { workspace = true }
+uuid = { workspace = true }
+dashmap = { workspace = true }
+
+# Time handling
+chrono = { workspace = true }

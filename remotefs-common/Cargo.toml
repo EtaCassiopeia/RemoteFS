@@ -1,0 +1,48 @@
+[package]
+name = "remotefs-common"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Async
+tokio = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+bincode = { workspace = true }
+
+# Encryption
+chacha20poly1305 = { workspace = true }
+x25519-dalek = { workspace = true }
+rand = { workspace = true }
+hkdf = { workspace = true }
+sha2 = { workspace = true }
+argon2 = { workspace = true }
+
+# Compression
+lz4_flex = { workspace = true }
+
+# Utilities
+bytes = { workspace = true }
+uuid = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+dashmap = { workspace = true }
+dirs = { workspace = true }
+num_cpus = { workspace = true }
+
+# Networking
+url = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Configuration
+toml = { workspace = true }

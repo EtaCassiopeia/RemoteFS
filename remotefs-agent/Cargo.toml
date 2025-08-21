@@ -1,0 +1,48 @@
+[package]
+name = "remotefs-agent"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "remotefs-agent"
+path = "src/main.rs"
+
+[dependencies]
+# Local dependencies
+remotefs-common = { path = "../remotefs-common" }
+
+# Async
+tokio = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+# File system operations
+libc = { workspace = true }
+
+# Networking
+tokio-tungstenite = { workspace = true }
+url = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+bincode = { workspace = true }
+
+# Configuration
+config = { workspace = true }
+clap = { workspace = true }
+dirs = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Utilities
+bytes = { workspace = true }
+dashmap = { workspace = true }
