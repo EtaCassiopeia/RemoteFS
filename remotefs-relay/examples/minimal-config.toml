@@ -1,0 +1,21 @@
+# Minimal RemoteFS Relay Server Configuration
+# This is the simplest configuration to get started with a relay server
+
+# Basic server settings - these are the only required settings
+bind_address = "0.0.0.0"    # Listen on all interfaces
+port = 8080                 # Default RemoteFS port
+
+# For local development/testing, disable security
+[security]
+enable_tls = false          # Disable TLS for local testing (NOT recommended for production)
+enable_auth = false         # Disable authentication for local testing (NOT recommended for production)
+
+# Basic logging for development
+[logging]
+level = "info"              # Info level logging
+format = "text"             # Text format for easier reading during development
+
+# Simple session management
+[session]
+timeout = 3600              # 1 hour session timeout
+max_sessions = 100          # Maximum 100 concurrent sessions

@@ -1,0 +1,61 @@
+# RemoteFS Relay Server Configuration Example
+# This file demonstrates all available configuration options for the relay server
+
+# Basic server settings
+bind_address = "0.0.0.0"           # Address to bind the server to
+port = 8080                        # Port to listen on
+max_connections = 1000             # Maximum concurrent connections
+
+# Message handling limits
+[message_limits]
+max_message_size = 67108864        # Maximum message size in bytes (64 MB)
+max_chunk_size = 1048576           # Maximum chunk size for file operations (1 MB)
+max_dir_entries = 10000            # Maximum directory entries in a single response
+
+# Session management
+[session]
+timeout = 3600                     # Session timeout in seconds (1 hour)
+max_sessions = 1000                # Maximum concurrent sessions
+cleanup_interval = 300             # Session cleanup interval in seconds (5 minutes)
+enable_persistence = false         # Whether to persist sessions across restarts
+storage_path = "/var/lib/remotefs/relay/sessions.db"  # Path for session storage (if enabled)
+
+# Storage configuration
+[storage]
+temp_dir = "/tmp/remotefs/relay"   # Directory for temporary files
+max_size_gb = 10.0                 # Maximum storage size in GB
+temp_file_ttl = 86400              # Temporary file TTL in seconds (24 hours)
+compress = true                    # Whether to compress temporary files
+cleanup_interval = 3600            # Storage cleanup interval in seconds (1 hour)
+
+# Security settings
+[security]
+key_file = "/etc/remotefs/relay.key"     # Private key file path
+cert_file = "/etc/remotefs/relay.crt"    # Certificate file path
+enable_tls = true                        # Enable TLS encryption
+verify_certs = false                     # Verify client certificates (relay doesn't usually verify clients)
+session_timeout = 3600                  # Session timeout in seconds
+enable_auth = true                       # Enable authentication
+allowed_clients = []                     # List of allowed client IDs (empty = allow all authenticated)
+
+# Network configuration
+[network]
+connection_timeout = 60            # Connection timeout in seconds
+read_timeout = 120                 # Read operation timeout in seconds  
+write_timeout = 120                # Write operation timeout in seconds
+heartbeat_interval = 60            # Heartbeat interval in seconds
+max_reconnect_attempts = 5         # Maximum reconnection attempts
+reconnect_backoff_base = 2         # Reconnection backoff multiplier
+max_concurrent_connections = 100   # Maximum concurrent connections per client
+tcp_keepalive = true               # Enable TCP keepalive
+keepalive_interval = 60            # TCP keepalive interval in seconds
+
+# Logging configuration
+[logging]
+level = "info"                     # Log level: trace, debug, info, warn, error
+format = "json"                    # Log format: json or text
+file = "/var/log/remotefs/relay.log"      # Log file path (optional, logs to stdout if not specified)
+max_file_size = 100                # Maximum log file size in MB
+max_files = 10                     # Maximum number of log files to keep
+enable_access_log = true           # Enable separate access log
+access_log_file = "/var/log/remotefs/relay-access.log"  # Access log file path

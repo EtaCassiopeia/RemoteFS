@@ -219,7 +219,7 @@ async fn handle_websocket(socket: WebSocket, state: AppState) {
     let connection_id = Uuid::new_v4();
     debug!("New WebSocket connection: {}", connection_id);
     
-    let (sender, mut receiver) = socket.split();
+    let (mut sender, mut receiver) = socket.split();
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
     
     // Spawn task to handle outgoing messages
@@ -318,7 +318,7 @@ async fn handle_binary_message(
 
 /// Message format for responses
 #[derive(Clone, Copy)]
-enum MessageFormat {
+pub enum MessageFormat {
     Json,
     Binary,
 }
@@ -397,7 +397,7 @@ async fn handle_auth_request(
                 node_type,
                 connection_id,
                 tx.clone(),
-                format,
+                format.into(),
             );
             
             // Store session
@@ -434,7 +434,7 @@ async fn handle_establish_channel(
     tx: &tokio::sync::mpsc::UnboundedSender<WsMessage>,
     format: MessageFormat,
 ) -> Result<()> {
-    if let Some(session) = session {
+    if let Some(_session) = session {
         // Forward the channel establishment request to the target node
         let establish_message = Message::EstablishChannel {
             target_node: target_node.clone(),
@@ -512,6 +512,4 @@ fn create_error_message(request_id: Option<uuid::Uuid>, error: RemoteFsError) ->
 }
 
 use futures::stream::StreamExt;
-use axum::extract::ws::WebSocket;
-use futures::stream::SplitSink;
 use futures::SinkExt;

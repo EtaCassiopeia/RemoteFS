@@ -1,0 +1,62 @@
+# Production RemoteFS Relay Server Configuration
+# This configuration is designed for production deployments with security and performance optimizations
+
+# Server settings optimized for production
+bind_address = "0.0.0.0"           # Bind to all interfaces
+port = 8443                        # Use HTTPS port for WSS
+max_connections = 5000             # Higher connection limit for production
+
+# Message limits for production workloads
+[message_limits]
+max_message_size = 134217728       # 128 MB max message size
+max_chunk_size = 4194304           # 4 MB chunks for better throughput
+max_dir_entries = 50000            # Higher limit for large directories
+
+# Production session management
+[session]
+timeout = 1800                     # Shorter timeout for security (30 minutes)
+max_sessions = 5000                # Match connection limit
+cleanup_interval = 180             # More frequent cleanup (3 minutes)
+enable_persistence = true          # Enable session persistence for reliability
+storage_path = "/var/lib/remotefs/relay/sessions.db"
+
+# Production storage configuration
+[storage]
+temp_dir = "/var/lib/remotefs/relay/temp"
+max_size_gb = 100.0                # Larger storage for production
+temp_file_ttl = 3600               # Shorter TTL for disk space management (1 hour)
+compress = true                    # Always compress to save disk space
+cleanup_interval = 1800            # More frequent cleanup (30 minutes)
+
+# Production security settings - always enable everything
+[security]
+key_file = "/etc/ssl/private/remotefs-relay.key"
+cert_file = "/etc/ssl/certs/remotefs-relay.crt"
+enable_tls = true                  # Always use TLS in production
+verify_certs = false               # Relay typically doesn't verify client certs
+session_timeout = 1800             # Match session timeout (30 minutes)
+enable_auth = true                 # Always require authentication
+# Whitelist specific client types in production
+allowed_clients = []               # Empty = allow all authenticated; populate for stricter control
+
+# Production network settings
+[network]
+connection_timeout = 120           # Longer timeout for production networks
+read_timeout = 300                 # 5 minute read timeout for large operations
+write_timeout = 300                # 5 minute write timeout for large operations
+heartbeat_interval = 30            # More frequent heartbeats for better monitoring
+max_reconnect_attempts = 3         # Limited reconnection attempts
+reconnect_backoff_base = 2         # Exponential backoff
+max_concurrent_connections = 50    # Limit per-client connections to prevent abuse
+tcp_keepalive = true               # Enable TCP keepalive
+keepalive_interval = 30            # More frequent keepalive
+
+# Production logging - structured and detailed
+[logging]
+level = "info"                     # Info level for production (not too verbose, but informative)
+format = "json"                    # JSON format for log aggregation systems (ELK, Splunk, etc.)
+file = "/var/log/remotefs/relay.log"
+max_file_size = 50                 # Smaller files for better log rotation
+max_files = 30                     # Keep more files for compliance/debugging (30 days if daily rotation)
+enable_access_log = true           # Always enable access logging in production
+access_log_file = "/var/log/remotefs/relay-access.log"

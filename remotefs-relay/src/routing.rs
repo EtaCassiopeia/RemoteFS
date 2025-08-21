@@ -1,4 +1,4 @@
-use crate::session::{Session, SessionManager};
+use crate::session::Session;
 use crate::server::AppState;
 use axum::extract::ws::Message as WsMessage;
 use remotefs_common::{
@@ -7,7 +7,7 @@ use remotefs_common::{
 };
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use tracing::{debug, warn, error};
+use tracing::{debug, warn};
 
 /// Statistics for message routing
 #[derive(Debug, Clone)]
@@ -195,7 +195,7 @@ impl MessageRouter {
         // In a real implementation, this would maintain a mapping of request IDs
         // to the originating client sessions. For now, we'll use a simplified approach.
         
-        if let Some(request_id) = message.request_id() {
+        if let Some(_request_id) = message.request_id() {
             // Look up the client session that initiated this request
             // This would require maintaining a request tracking table
             

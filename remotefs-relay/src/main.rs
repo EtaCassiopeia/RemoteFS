@@ -1,5 +1,4 @@
 use remotefs_common::{
-    config::RelayConfig,
     load_relay_config,
     error::Result,
 };
