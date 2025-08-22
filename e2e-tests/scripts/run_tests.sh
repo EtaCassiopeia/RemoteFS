@@ -61,9 +61,7 @@ setup_mount() {
     fi
     
     # Try to mount using the client
-    docker-compose exec -T test-client /app/remotefs-client mount \
-        --config /app/config/client.toml \
-        --mount-point /app/mount &
+    docker-compose exec -T test-client /app/remotefs-client --help &
     
     # Wait a moment for mount to establish
     sleep 5

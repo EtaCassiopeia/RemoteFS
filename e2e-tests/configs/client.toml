@@ -8,6 +8,13 @@ connection_timeout = 10
 request_timeout = 60
 heartbeat_interval = 30
 
+[reconnection]
+enabled = true
+max_attempts = 5
+initial_delay = 1
+max_delay = 30
+backoff_multiplier = 2.0
+
 [authentication]
 method = "shared_key"
 shared_key = "test-shared-key-for-e2e"
