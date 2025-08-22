@@ -14,7 +14,7 @@ services:
       - ./test-results:/app/test-results
     environment:
       - RUST_LOG=debug
-      - REMOTEFS_CONFIG=/app/config/relay.toml
+      - REMOTEFS_RELAY_CONFIG=/app/config/relay.toml
     networks:
       - remotefs-network
     healthcheck:

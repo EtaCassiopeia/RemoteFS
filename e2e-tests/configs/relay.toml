@@ -1,34 +1,54 @@
-[server]
+# Basic server settings
 bind_address = "0.0.0.0"
 port = 8080
-websocket_port = 8081
 max_connections = 1000
-heartbeat_interval = 30
 
-[authentication]
-enabled = true
-jwt_secret = "test-jwt-secret-key-for-e2e-testing"
-session_timeout = 3600  # 1 hour
+# Message handling limits
+[message_limits]
+max_message_size = 10485760        # Maximum message size in bytes (10 MB)
+max_chunk_size = 1048576           # Maximum chunk size for file operations (1 MB)
+max_dir_entries = 10000            # Maximum directory entries in a single response
 
-[logging]
-level = "debug"
-format = "json"
+# Storage configuration
+[storage]
+temp_dir = "/tmp/remotefs/relay"   # Directory for temporary files
+max_size_gb = 10.0                 # Maximum storage size in GB
+temp_file_ttl = 86400              # Temporary file TTL in seconds (24 hours)
+compress = true                    # Whether to compress temporary files
+cleanup_interval = 3600            # Storage cleanup interval in seconds (1 hour)
 
-[routing]
-enable_load_balancing = true
-timeout_seconds = 30
-retry_attempts = 3
-
+# Security settings
 [security]
-enable_tls = false  # Disabled for local testing
-cors_origins = ["*"]
+key_file = "/tmp/relay.key"            # Private key file path (not used in testing)
+cert_file = "/tmp/relay.crt"           # Certificate file path (not used in testing)
+enable_tls = false                     # Enable TLS encryption (disabled for testing)
+verify_certs = false                   # Verify client certificates
+session_timeout = 3600                 # Session timeout in seconds
+enable_auth = true                     # Enable authentication
+allowed_clients = []                   # List of allowed client IDs (empty = allow all authenticated)
 
-[performance]
-max_message_size = 10485760  # 10MB
-compression = true
-keep_alive = true
+# Network configuration
+[network]
+connection_timeout = 60            # Connection timeout in seconds
+read_timeout = 120                 # Read operation timeout in seconds  
+write_timeout = 120                # Write operation timeout in seconds
+heartbeat_interval = 30            # Heartbeat interval in seconds
+max_reconnect_attempts = 5         # Maximum reconnection attempts
+reconnect_backoff_base = 2         # Reconnection backoff multiplier
+max_concurrent_connections = 100   # Maximum concurrent connections per client
+tcp_keepalive = true               # Enable TCP keepalive
+keepalive_interval = 60            # TCP keepalive interval in seconds
 
-[monitoring]
-enable_metrics = true
-metrics_port = 8082
-health_check_port = 8080
+# Logging configuration
+[logging]
+level = "debug"                    # Log level: trace, debug, info, warn, error
+format = "json"                    # Log format: json or text
+max_file_size = 100                # Maximum log file size in MB
+max_files = 10                     # Maximum number of log files to keep
+enable_access_log = false          # Enable separate access log
+
+[session]
+timeout = 3600                     # Session timeout in seconds (1 hour)
+max_sessions = 1000                # Maximum concurrent sessions
+cleanup_interval = 300             # Session cleanup interval in seconds (5 minutes)
+enable_persistence = false         # Whether to persist sessions across restarts
