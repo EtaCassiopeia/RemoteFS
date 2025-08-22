@@ -19,7 +19,7 @@ use std::{
 use tokio::sync::RwLock;
 use tracing::{debug};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
+use chrono::DateTime;
 
 /// Handles filesystem operations with access control and performance monitoring
 pub struct FilesystemHandler {
@@ -495,7 +495,7 @@ impl FilesystemHandler {
         &self,
         request_id: Uuid,
         path: String,
-        mode: u32,
+        _mode: u32,
     ) -> Option<Message> {
         let operation_id = Uuid::new_v4();
         let start_time = SystemTime::now();

@@ -250,7 +250,6 @@ pub mod network {
 
 /// Retry utilities
 pub mod retry {
-    use super::*;
     use std::time::Duration;
     use tokio::time::sleep;
     
@@ -369,6 +368,7 @@ pub mod validation {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
     
     #[test]
     fn test_path_normalization() {

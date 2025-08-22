@@ -7,10 +7,9 @@ use std::{
     collections::HashSet,
     path::{Path, PathBuf},
     sync::Arc,
-    fs,
 };
 use tokio::sync::RwLock;
-use tracing::{debug, warn};
+use tracing::debug;
 
 /// Access control manager that enforces security policies
 #[derive(Clone)]

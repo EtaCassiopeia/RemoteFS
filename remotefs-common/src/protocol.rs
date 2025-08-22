@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
-use bytes::Bytes;
 use chrono::{DateTime, Utc};
 
 /// Unique identifier for a request-response pair

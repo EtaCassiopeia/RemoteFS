@@ -1,6 +1,6 @@
-use crate::config::{AgentConfig, ConnectionConfig, ReconnectionConfig};
+use crate::config::{AgentConfig, ConnectionConfig};
 use crate::error::{ClientError, ClientResult};
-use remotefs_common::protocol::{Message, generate_request_id};
+use remotefs_common::protocol::Message;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -416,21 +416,6 @@ impl AgentConnection {
         if *state_guard != ConnectionState::Disconnected {
             debug!("Agent {} state changed: {:?} -> {:?}", agent_id, *state_guard, ConnectionState::Disconnected);
             *state_guard = ConnectionState::Disconnected;
-        }
-    }
-    
-    /// Handle received message
-    async fn handle_received_message(&self, message: Message) {
-        let request_id = message.request_id();
-        
-        // Check if this is a response to a pending request
-        if let Some(request_id) = request_id {
-            if let Some((_, response_tx)) = self.pending_requests.remove(&request_id) {
-                let _ = response_tx.send(Ok(message));
-            }
-        } else {
-            // This is an unsolicited message (notification, event, etc.)
-            debug!("Received unsolicited message from agent {}: {:?}", self.config.id, message);
         }
     }
     

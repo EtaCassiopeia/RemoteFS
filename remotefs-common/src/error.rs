@@ -154,23 +154,3 @@ impl From<std::io::Error> for RemoteFsError {
     }
 }
 
-/// FUSE-specific error conversion
-#[cfg(feature = "fuse")]
-impl From<RemoteFsError> for fuse3::Errno {
-    fn from(error: RemoteFsError) -> Self {
-        match error {
-            RemoteFsError::NotFound(_) => fuse3::Errno::from(libc::ENOENT),
-            RemoteFsError::PermissionDenied(_) => fuse3::Errno::from(libc::EACCES),
-            RemoteFsError::AlreadyExists(_) => fuse3::Errno::from(libc::EEXIST),
-            RemoteFsError::InvalidPath(_) => fuse3::Errno::from(libc::EINVAL),
-            RemoteFsError::Timeout(_) => fuse3::Errno::from(libc::ETIMEDOUT),
-            RemoteFsError::Connection(_) => fuse3::Errno::from(libc::ECONNREFUSED),
-            RemoteFsError::Network(_) => fuse3::Errno::from(libc::ENETDOWN),
-            RemoteFsError::ServiceUnavailable(_) => fuse3::Errno::from(libc::EAGAIN),
-            RemoteFsError::FileSystem(ref msg) if msg.contains("Disk full") => fuse3::Errno::from(libc::ENOSPC),
-            RemoteFsError::FileSystem(ref msg) if msg.contains("Read-only") => fuse3::Errno::from(libc::EROFS),
-            RemoteFsError::NotImplemented(_) => fuse3::Errno::from(libc::ENOSYS),
-            _ => fuse3::Errno::from(libc::EIO),
-        }
-    }
-}

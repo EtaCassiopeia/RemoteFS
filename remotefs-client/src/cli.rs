@@ -3,7 +3,7 @@ use crate::config::ClientConfig;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
-use tracing::{info, error};
+use tracing::info;
 use bytes::Bytes;
 
 #[derive(Parser)]
