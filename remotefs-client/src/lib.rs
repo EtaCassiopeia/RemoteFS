@@ -14,5 +14,8 @@ pub use config::*;
 pub use connection::*;
 pub use error::*;
 
+// Type alias for convenience
+pub type Client = RemoteFsClient;
+
 // Re-export common types for convenience
 pub use remotefs_common::{error::RemoteFsError, protocol::*};

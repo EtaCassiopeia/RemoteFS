@@ -154,12 +154,9 @@ pub async fn run(args: CliArgs) -> Result<()> {
             println!("Type: {:?}", metadata.file_type);
             println!("Size: {} bytes", metadata.size);
             println!("Permissions: {:o}", metadata.permissions);
-            if let Some(modified) = metadata.modified {
-                println!("Modified: {:?}", modified);
-            }
-            if let Some(accessed) = metadata.accessed {
-                println!("Accessed: {:?}", accessed);
-            }
+            println!("Modified: {:?}", metadata.modified);
+            println!("Accessed: {:?}", metadata.accessed);
+            println!("Created: {:?}", metadata.created);
         }
         
         Commands::Mkdir { path, mode } => {

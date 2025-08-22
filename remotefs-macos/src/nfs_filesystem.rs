@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use remotefs_client::Client;
+use remotefs_client::{Client, ClientError};
 use remotefs_common::{
     protocol::{FileMetadata, Message},
     error::RemoteFsError,
@@ -15,11 +15,11 @@ use zerofs_nfsserve::{
 
 /// NFS filesystem adapter that proxies requests to RemoteFS agents
 pub struct RemoteNfsFilesystem {
-    client: Arc<Client>,
-    next_file_id: AtomicU64,
-    path_to_id_map: Arc<RwLock<HashMap<String, u64>>>,
-    id_to_path_map: Arc<RwLock<HashMap<u64, String>>>,
-    root_id: u64,
+    pub client: Arc<Client>,
+    pub next_file_id: AtomicU64,
+    pub path_to_id_map: Arc<RwLock<HashMap<String, u64>>>,
+    pub id_to_path_map: Arc<RwLock<HashMap<u64, String>>>,
+    pub root_id: u64,
 }
 
 impl RemoteNfsFilesystem {
@@ -165,13 +165,13 @@ impl NFSFileSystem for RemoteNfsFilesystem {
         debug!("Looking up full path: {}", full_path);
         
         // Try to get metadata to verify file exists
-        match self.client.get_metadata(&full_path, false).await {
+        match self.client.get_metadata_with_options(&full_path, false).await {
             Ok(_) => {
                 let file_id = self.get_or_create_file_id(&full_path).await;
                 debug!("Lookup successful: {} -> {}", full_path, file_id);
                 Ok(file_id)
             }
-            Err(RemoteFsError::NotFound(_)) => {
+            Err(ClientError::RemoteFs(RemoteFsError::NotFound(_))) => {
                 debug!("File not found: {}", full_path);
                 Err(nfsstat3::NFS3ERR_NOENT)
             }
@@ -193,13 +193,13 @@ impl NFSFileSystem for RemoteNfsFilesystem {
             }
         };
         
-        match self.client.get_metadata(&path, false).await {
+        match self.client.get_metadata_with_options(&path, false).await {
             Ok(metadata) => {
                 let fattr = self.file_metadata_to_fattr(&metadata, id);
                 debug!("getattr successful for {}: {:?}", path, fattr);
                 Ok(fattr)
             }
-            Err(RemoteFsError::NotFound(_)) => Err(nfsstat3::NFS3ERR_NOENT),
+            Err(ClientError::RemoteFs(RemoteFsError::NotFound(_))) => Err(nfsstat3::NFS3ERR_NOENT),
             Err(e) => {
                 warn!("getattr error for {}: {:?}", path, e);
                 Err(nfsstat3::NFS3ERR_IO)
@@ -221,14 +221,14 @@ impl NFSFileSystem for RemoteNfsFilesystem {
             None => return Err(nfsstat3::NFS3ERR_NOENT),
         };
         
-        match self.client.read_file(&path, Some(offset), Some(count as u64)).await {
+        match self.client.read_file_range(&path, Some(offset), Some(count as u64)).await {
             Ok(data) => {
                 let eof = (data.len() as u32) < count;
                 debug!("Read {} bytes from {}, eof={}", data.len(), path, eof);
-                Ok((data, eof))
+                Ok((data.to_vec(), eof))
             }
-            Err(RemoteFsError::NotFound(_)) => Err(nfsstat3::NFS3ERR_NOENT),
-            Err(RemoteFsError::PermissionDenied(_)) => Err(nfsstat3::NFS3ERR_ACCES),
+            Err(ClientError::RemoteFs(RemoteFsError::NotFound(_))) => Err(nfsstat3::NFS3ERR_NOENT),
+            Err(ClientError::RemoteFs(RemoteFsError::PermissionDenied(_))) => Err(nfsstat3::NFS3ERR_ACCES),
             Err(e) => {
                 warn!("Read error for {}: {:?}", path, e);
                 Err(nfsstat3::NFS3ERR_IO)
@@ -250,10 +250,10 @@ impl NFSFileSystem for RemoteNfsFilesystem {
             None => return Err(nfsstat3::NFS3ERR_NOENT),
         };
         
-        match self.client.write_file(&path, data.to_vec(), Some(offset), false).await {
+        match self.client.write_file_at(&path, bytes::Bytes::from(data.to_vec()), Some(offset), false).await {
             Ok(_) => {
                 // Get updated metadata
-                match self.client.get_metadata(&path, false).await {
+                match self.client.get_metadata_with_options(&path, false).await {
                     Ok(metadata) => {
                         let fattr = self.file_metadata_to_fattr(&metadata, id);
                         debug!("Write successful for {}", path);
@@ -262,8 +262,8 @@ impl NFSFileSystem for RemoteNfsFilesystem {
                     Err(_) => Err(nfsstat3::NFS3ERR_IO),
                 }
             }
-            Err(RemoteFsError::NotFound(_)) => Err(nfsstat3::NFS3ERR_NOENT),
-            Err(RemoteFsError::PermissionDenied(_)) => Err(nfsstat3::NFS3ERR_ACCES),
+            Err(ClientError::RemoteFs(RemoteFsError::NotFound(_))) => Err(nfsstat3::NFS3ERR_NOENT),
+            Err(ClientError::RemoteFs(RemoteFsError::PermissionDenied(_))) => Err(nfsstat3::NFS3ERR_ACCES),
             Err(e) => {
                 warn!("Write error for {}: {:?}", path, e);
                 Err(nfsstat3::NFS3ERR_IO)
@@ -288,12 +288,12 @@ impl NFSFileSystem for RemoteNfsFilesystem {
         let filename_str = String::from_utf8_lossy(filename);
         let full_path = self.join_path(&dir_path, &filename_str);
         
-        match self.client.write_file(&full_path, vec![], None, true).await {
+        match self.client.write_file(&full_path, bytes::Bytes::new()).await {
             Ok(_) => {
                 let file_id = self.get_or_create_file_id(&full_path).await;
                 
                 // Get file metadata
-                match self.client.get_metadata(&full_path, false).await {
+                match self.client.get_metadata_with_options(&full_path, false).await {
                     Ok(metadata) => {
                         let fattr = self.file_metadata_to_fattr(&metadata, file_id);
                         debug!("Create successful: {} -> {}", full_path, file_id);
@@ -302,8 +302,8 @@ impl NFSFileSystem for RemoteNfsFilesystem {
                     Err(_) => Err(nfsstat3::NFS3ERR_IO),
                 }
             }
-            Err(RemoteFsError::AlreadyExists(_)) => Err(nfsstat3::NFS3ERR_EXIST),
-            Err(RemoteFsError::PermissionDenied(_)) => Err(nfsstat3::NFS3ERR_ACCES),
+            Err(ClientError::RemoteFs(RemoteFsError::AlreadyExists(_))) => Err(nfsstat3::NFS3ERR_EXIST),
+            Err(ClientError::RemoteFs(RemoteFsError::PermissionDenied(_))) => Err(nfsstat3::NFS3ERR_ACCES),
             Err(e) => {
                 warn!("Create error for {}: {:?}", full_path, e);
                 Err(nfsstat3::NFS3ERR_IO)
@@ -328,12 +328,12 @@ impl NFSFileSystem for RemoteNfsFilesystem {
         let dirname_str = String::from_utf8_lossy(dirname);
         let full_path = self.join_path(&dir_path, &dirname_str);
         
-        match self.client.create_directory(&full_path, false).await {
+        match self.client.create_directory(&full_path).await {
             Ok(_) => {
                 let dir_id = self.get_or_create_file_id(&full_path).await;
                 
                 // Get directory metadata
-                match self.client.get_metadata(&full_path, false).await {
+                match self.client.get_metadata_with_options(&full_path, false).await {
                     Ok(metadata) => {
                         let fattr = self.file_metadata_to_fattr(&metadata, dir_id);
                         debug!("Mkdir successful: {} -> {}", full_path, dir_id);
@@ -342,8 +342,8 @@ impl NFSFileSystem for RemoteNfsFilesystem {
                     Err(_) => Err(nfsstat3::NFS3ERR_IO),
                 }
             }
-            Err(RemoteFsError::AlreadyExists(_)) => Err(nfsstat3::NFS3ERR_EXIST),
-            Err(RemoteFsError::PermissionDenied(_)) => Err(nfsstat3::NFS3ERR_ACCES),
+            Err(ClientError::RemoteFs(RemoteFsError::AlreadyExists(_))) => Err(nfsstat3::NFS3ERR_EXIST),
+            Err(ClientError::RemoteFs(RemoteFsError::PermissionDenied(_))) => Err(nfsstat3::NFS3ERR_ACCES),
             Err(e) => {
                 warn!("Mkdir error for {}: {:?}", full_path, e);
                 Err(nfsstat3::NFS3ERR_IO)
@@ -381,8 +381,8 @@ impl NFSFileSystem for RemoteNfsFilesystem {
                 debug!("Remove successful: {}", full_path);
                 Ok(())
             }
-            Err(RemoteFsError::NotFound(_)) => Err(nfsstat3::NFS3ERR_NOENT),
-            Err(RemoteFsError::PermissionDenied(_)) => Err(nfsstat3::NFS3ERR_ACCES),
+            Err(ClientError::RemoteFs(RemoteFsError::NotFound(_))) => Err(nfsstat3::NFS3ERR_NOENT),
+            Err(ClientError::RemoteFs(RemoteFsError::PermissionDenied(_))) => Err(nfsstat3::NFS3ERR_ACCES),
             Err(e) => {
                 warn!("Remove error for {}: {:?}", full_path, e);
                 Err(nfsstat3::NFS3ERR_IO)
@@ -404,7 +404,7 @@ impl NFSFileSystem for RemoteNfsFilesystem {
             None => return Err(nfsstat3::NFS3ERR_NOENT),
         };
         
-        match self.client.list_directory(&dir_path, false).await {
+        match self.client.list_directory(&dir_path).await {
             Ok(entries) => {
                 let mut nfs_entries = Vec::new();
                 let mut count = 0;
@@ -413,13 +413,13 @@ impl NFSFileSystem for RemoteNfsFilesystem {
                 if start_after == 0 {
                     // Add . entry
                     if count < max_entries {
-                        if let Ok(metadata) = self.client.get_metadata(&dir_path, false).await {
+                        if let Ok(metadata) = self.client.get_metadata(&dir_path).await {
                             let fattr = self.file_metadata_to_fattr(&metadata, dirid);
-                            nfs_entries.push(NfsDirEntry {
-                                fileid: dirid,
-                                name: filename3(b".".to_vec()),
-                                attr: fattr,
-                            });
+                        nfs_entries.push(NfsDirEntry {
+                            fileid: dirid,
+                            name: zerofs_nfsserve::nfs::nfsstring(b".".to_vec()),
+                            attr: fattr,
+                        });
                             count += 1;
                         }
                     }
@@ -436,11 +436,11 @@ impl NFSFileSystem for RemoteNfsFilesystem {
                         };
                         
                         let parent_id = self.get_or_create_file_id(&parent_path).await;
-                        if let Ok(metadata) = self.client.get_metadata(&parent_path, false).await {
+                        if let Ok(metadata) = self.client.get_metadata(&parent_path).await {
                             let fattr = self.file_metadata_to_fattr(&metadata, parent_id);
                             nfs_entries.push(NfsDirEntry {
                                 fileid: parent_id,
-                                name: filename3(b"..".to_vec()),
+                                name: zerofs_nfsserve::nfs::nfsstring(b"..".to_vec()),
                                 attr: fattr,
                             });
                             count += 1;
@@ -457,10 +457,10 @@ impl NFSFileSystem for RemoteNfsFilesystem {
                     let entry_path = self.join_path(&dir_path, &entry.name);
                     let entry_id = self.get_or_create_file_id(&entry_path).await;
                     
-                    let fattr = self.file_metadata_to_fattr(&entry, entry_id);
+                    let fattr = self.file_metadata_to_fattr(&entry.metadata, entry_id);
                     nfs_entries.push(NfsDirEntry {
                         fileid: entry_id,
-                        name: filename3(entry.name.into_bytes()),
+                        name: zerofs_nfsserve::nfs::nfsstring(entry.name.into_bytes()),
                         attr: fattr,
                     });
                     count += 1;
@@ -472,8 +472,8 @@ impl NFSFileSystem for RemoteNfsFilesystem {
                     end: count < max_entries,
                 })
             }
-            Err(RemoteFsError::NotFound(_)) => Err(nfsstat3::NFS3ERR_NOENT),
-            Err(RemoteFsError::PermissionDenied(_)) => Err(nfsstat3::NFS3ERR_ACCES),
+            Err(ClientError::RemoteFs(RemoteFsError::NotFound(_))) => Err(nfsstat3::NFS3ERR_NOENT),
+            Err(ClientError::RemoteFs(RemoteFsError::PermissionDenied(_))) => Err(nfsstat3::NFS3ERR_ACCES),
             Err(e) => {
                 warn!("Readdir error for {}: {:?}", dir_path, e);
                 Err(nfsstat3::NFS3ERR_IO)
@@ -507,7 +507,7 @@ impl NFSFileSystem for RemoteNfsFilesystem {
         let from_path = self.join_path(&from_dir_path, &from_filename_str);
         let to_path = self.join_path(&to_dir_path, &to_filename_str);
         
-        match self.client.move_file(&from_path, &to_path).await {
+        match self.client.move_path(&from_path, &to_path).await {
             Ok(_) => {
                 // Update our path mappings
                 {
@@ -516,14 +516,14 @@ impl NFSFileSystem for RemoteNfsFilesystem {
                     
                     if let Some(id) = path_map.remove(&from_path) {
                         path_map.insert(to_path.clone(), id);
-                        id_map.insert(id, to_path);
+                        id_map.insert(id, to_path.clone());
                     }
                 }
                 debug!("Rename successful: {} -> {}", from_path, to_path);
                 Ok(())
             }
-            Err(RemoteFsError::NotFound(_)) => Err(nfsstat3::NFS3ERR_NOENT),
-            Err(RemoteFsError::PermissionDenied(_)) => Err(nfsstat3::NFS3ERR_ACCES),
+            Err(ClientError::RemoteFs(RemoteFsError::NotFound(_))) => Err(nfsstat3::NFS3ERR_NOENT),
+            Err(ClientError::RemoteFs(RemoteFsError::PermissionDenied(_))) => Err(nfsstat3::NFS3ERR_ACCES),
             Err(e) => {
                 warn!("Rename error {} -> {}: {:?}", from_path, to_path, e);
                 Err(nfsstat3::NFS3ERR_IO)
@@ -583,6 +583,17 @@ impl NFSFileSystem for RemoteNfsFilesystem {
         _spec: Option<&specdata3>,
     ) -> Result<(fileid3, fattr3), nfsstat3> {
         // Special files not supported
+        Err(nfsstat3::NFS3ERR_NOTSUPP)
+    }
+
+    async fn link(
+        &self,
+        _auth: &AuthContext,
+        _id: fileid3,
+        _dirid: fileid3,
+        _filename: &filename3,
+    ) -> Result<(), nfsstat3> {
+        // Hard links not supported for now
         Err(nfsstat3::NFS3ERR_NOTSUPP)
     }
 }

@@ -1,7 +1,6 @@
 use crate::{MacOSConfig, RemoteNfsServer, Result};
 use clap::{Parser, Subcommand};
-use remotefs_client::Client;
-use remotefs_common::config::ClientConfig;
+use remotefs_client::{Client, ClientError, ClientConfig, AgentConfig, ClientBehaviorConfig, ConnectionConfig, ReconnectionConfig, AuthConfig, AuthMethod, AuthCredentials, LoggingConfig, RetryStrategy, LoadBalancingStrategy};
 use std::path::PathBuf;
 use tracing::{info, warn};
 
@@ -133,21 +132,27 @@ impl Cli {
         info!("Configuration loaded and validated");
         
         // Create RemoteFS client
-        let client_config = self.create_client_config(&config);
-        let client = Client::new(client_config);
+        let client_config = self.create_client_config(&config)?;
+        let client = Client::new(client_config)
+            .map_err(|e| remotefs_common::error::RemoteFsError::Internal(
+                format!("Failed to create client: {}", e)
+            ))?;
         
-        // Connect to agents
+        // Initialize client (connects to agents)
         info!("Connecting to RemoteFS agents...");
-        client.connect().await?;
+        client.initialize().await
+            .map_err(|e| remotefs_common::error::RemoteFsError::Internal(
+                format!("Failed to connect to agents: {}", e)
+            ))?;
         info!("Successfully connected to agents");
         
         // Create and initialize NFS server
         let mut server = RemoteNfsServer::new(config);
-        server.initialize(client.clone()).await?;
+        server.initialize(client).await?;
         
-        // Start server with monitoring
-        info!("Starting NFS server with connection monitoring");
-        server.start_with_monitoring(&client).await
+        // Start server (monitoring is done internally)
+        info!("Starting NFS server");
+        server.start().await
     }
     
     fn load_config(&self) -> Result<MacOSConfig> {
@@ -174,17 +179,65 @@ impl Cli {
         }
     }
     
-    fn create_client_config(&self, config: &MacOSConfig) -> ClientConfig {
-        ClientConfig {
-            agents: config.agents.clone(),
-            connection_timeout: std::time::Duration::from_secs(config.connection_timeout),
-            request_timeout: std::time::Duration::from_secs(config.request_timeout),
-            max_connections: config.max_connections,
-            retry_attempts: 3,
-            retry_delay: std::time::Duration::from_secs(5),
-            auth_token: config.auth.token.clone(),
-            ..Default::default()
-        }
+    fn create_client_config(&self, config: &MacOSConfig) -> Result<ClientConfig> {
+        // Convert agent URLs to AgentConfig structs
+        let agents: Vec<AgentConfig> = config.agents.iter().enumerate().map(|(i, url)| {
+            AgentConfig {
+                id: format!("agent-{}", i),
+                url: url.clone(),
+                auth: if config.auth.enabled && config.auth.token.is_some() {
+                    Some(AuthConfig {
+                        method: AuthMethod::Token,
+                        credentials: AuthCredentials::Token {
+                            token: config.auth.token.as_ref().unwrap().clone(),
+                        },
+                    })
+                } else {
+                    None
+                },
+                weight: 1,
+                enabled: true,
+            }
+        }).collect();
+        
+        let client_config = ClientConfig {
+            agents,
+            client: ClientBehaviorConfig {
+                operation_timeout_ms: config.request_timeout * 1000,
+                max_retries: 3,
+                retry_strategy: RetryStrategy::Exponential {
+                    base_delay_ms: 1000,
+                    max_delay_ms: 30000,
+                },
+                load_balancing: LoadBalancingStrategy::RoundRobin,
+                enable_failover: true,
+                read_buffer_size: config.performance.read_buffer_size,
+                write_buffer_size: config.performance.write_buffer_size,
+            },
+            connection: ConnectionConfig {
+                connect_timeout_ms: config.connection_timeout * 1000,
+                heartbeat_interval_ms: 30000,
+                max_message_size: 64 * 1024 * 1024, // 64MB
+                enable_compression: config.performance.compression_enabled,
+                reconnection: ReconnectionConfig {
+                    enabled: true,
+                    max_attempts: 5,
+                    base_delay_ms: 1000,
+                    max_delay_ms: 30000,
+                    backoff_multiplier: 2.0,
+                },
+            },
+            auth: None, // Auth is handled per-agent
+            logging: LoggingConfig {
+                level: if self.verbose { "debug" } else { "info" }.to_string(),
+                format: "human".to_string(),
+                file: None,
+                enable_connection_logs: self.verbose,
+                enable_performance_logs: self.verbose,
+            },
+        };
+        
+        Ok(client_config)
     }
     
     fn handle_config(&self, action: &ConfigAction) -> Result<()> {
@@ -266,16 +319,12 @@ impl Cli {
         }
         
         // Mount filesystem
-        let mount_cmd = vec![
-            "mount", "-t", "nfs",
-            "-o", &format!("vers=3,tcp,port={},mountport={},rsize=1048576,wsize=1048576,async", 
-                          config.port, config.port),
-            &format!("{}:/", config.host),
-            mount_point,
-        ];
+        let mount_opts = format!("vers=3,tcp,port={},mountport={},rsize=1048576,wsize=1048576,async", 
+                          config.port, config.port);
+        let host_path = format!("{}:/", config.host);
         
         let mount_output = Command::new("sudo")
-            .args(&mount_cmd)
+            .args(&["mount", "-t", "nfs", "-o", &mount_opts, &host_path, mount_point])
             .output()
             .map_err(|e| remotefs_common::error::RemoteFsError::Internal(
                 format!("Failed to execute mount command: {}", e)

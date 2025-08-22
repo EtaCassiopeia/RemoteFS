@@ -16,6 +16,18 @@ pub type SessionToken = String;
 /// File system path
 pub type FsPath = String;
 
+/// File type enumeration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum FileType {
+    File,
+    Directory, 
+    Symlink,
+    BlockDevice,
+    CharDevice,
+    Fifo,
+    Socket,
+}
+
 /// File metadata structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileMetadata {
@@ -29,6 +41,7 @@ pub struct FileMetadata {
     pub is_dir: bool,
     pub is_file: bool,
     pub is_symlink: bool,
+    pub file_type: FileType,
     pub symlink_target: Option<String>,
 }
 
@@ -533,7 +546,7 @@ mod tests {
         let response = Message::ReadFileResponse {
             request_id,
             success: true,
-            data: Some(Bytes::from("test data")),
+            data: Some("test data".as_bytes().to_vec()),
             bytes_read: 9,
             error: None,
         };
