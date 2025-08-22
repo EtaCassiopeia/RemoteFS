@@ -1,5 +1,5 @@
 # Remote Agent Dockerfile (Simulating macOS)
-FROM rust:1.75 as builder
+FROM rust:1.75 AS builder
 
 WORKDIR /app
 COPY . .

@@ -1,5 +1,5 @@
 # Relay Server Dockerfile
-FROM rust:1.75 as builder
+FROM rust:1.75 AS builder
 
 WORKDIR /app
 COPY . .
