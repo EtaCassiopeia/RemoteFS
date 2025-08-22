@@ -1,0 +1,37 @@
+[client]
+name = "E2E Test Client"
+node_type = "Client"
+
+[connection]
+relay_url = "ws://relay:8081"
+connection_timeout = 10
+request_timeout = 60
+heartbeat_interval = 30
+
+[authentication]
+method = "shared_key"
+shared_key = "test-shared-key-for-e2e"
+
+[behavior]
+retry_attempts = 3
+retry_delay = 1
+load_balancing = true
+preferred_agents = ["remote-macos-agent-001"]
+
+[agents.remote-macos-agent-001]
+name = "Remote macOS Agent"
+priority = 1
+health_check_interval = 30
+
+[logging]
+level = "debug"
+enable_file_logging = true
+log_file = "/app/test-results/client.log"
+
+[performance]
+max_concurrent_requests = 20
+request_buffer_size = 65536  # 64KB
+
+[testing]
+mount_point = "/app/mount"
+test_results_dir = "/app/test-results"

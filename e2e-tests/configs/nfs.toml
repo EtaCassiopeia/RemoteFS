@@ -1,0 +1,31 @@
+[nfs]
+bind_address = "0.0.0.0"
+port = 2049
+mount_port = 2049
+version = 3
+
+[connection]
+relay_url = "ws://relay:8081"
+agent_id = "remote-macos-agent-001"
+connection_timeout = 10
+reconnect_interval = 5
+
+[authentication]
+method = "shared_key"
+shared_key = "test-shared-key-for-e2e"
+
+[filesystem]
+root_path = "/"
+max_file_size = 104857600  # 100MB
+read_buffer_size = 1048576   # 1MB
+write_buffer_size = 1048576  # 1MB
+
+[performance]
+async_writes = true
+max_concurrent_operations = 100
+cache_timeout = 30
+
+[logging]
+level = "debug"
+enable_file_logging = true
+log_file = "/app/test-results/nfs.log"

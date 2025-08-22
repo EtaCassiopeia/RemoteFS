@@ -1,0 +1,51 @@
+[agent]
+node_id = "remote-macos-agent-001"
+node_type = "Agent"
+name = "Remote macOS Development Machine"
+description = "Simulated macOS development environment for E2E testing"
+
+[connection]
+relay_url = "ws://relay:8081"
+reconnect_interval = 5
+max_reconnect_attempts = 10
+heartbeat_interval = 30
+connection_timeout = 10
+
+[authentication]
+method = "shared_key"
+shared_key = "test-shared-key-for-e2e"
+
+[filesystem]
+root_path = "/app/workspace"
+max_file_size = 104857600  # 100MB
+allowed_extensions = ["*"]  # Allow all file types for testing
+enable_compression = true
+
+[security]
+enable_encryption = false  # Disabled for local testing
+allowed_operations = [
+    "read_file",
+    "write_file", 
+    "create_directory",
+    "delete_file",
+    "delete_directory",
+    "list_directory",
+    "get_metadata",
+    "copy_file",
+    "move_file",
+    "rename_file"
+]
+
+[performance]
+max_concurrent_operations = 50
+operation_timeout = 300  # 5 minutes
+buffer_size = 65536  # 64KB
+
+[logging]
+level = "debug"
+enable_file_logging = true
+log_file = "/app/test-results/agent.log"
+
+[monitoring]
+enable_metrics = true
+metrics_interval = 60

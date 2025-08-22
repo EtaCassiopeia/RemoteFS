@@ -1,0 +1,33 @@
+# NFS Server Dockerfile
+FROM rust:1.75 as builder
+
+WORKDIR /app
+COPY . .
+
+# Build the NFS server
+RUN cargo build --release --bin remotefs-nfs
+
+# Runtime image
+FROM ubuntu:22.04
+
+RUN apt-get update && apt-get install -y \
+    nfs-kernel-server \
+    rpcbind \
+    curl \
+    procps \
+    psmisc \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy the binary
+COPY --from=builder /app/target/release/remotefs-nfs /app/remotefs-nfs
+
+# Create directories
+RUN mkdir -p /app/config /app/test-results
+
+EXPOSE 2049 111
+
+# Start NFS services and RemoteFS NFS server
+CMD service rpcbind start && service nfs-kernel-server start && /app/remotefs-nfs --config /app/config/nfs.toml

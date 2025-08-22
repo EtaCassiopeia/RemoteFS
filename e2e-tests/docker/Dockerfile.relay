@@ -1,0 +1,32 @@
+# Relay Server Dockerfile
+FROM rust:1.75 as builder
+
+WORKDIR /app
+COPY . .
+
+# Build the relay server
+RUN cargo build --release --bin remotefs-relay
+
+# Runtime image
+FROM ubuntu:22.04
+
+RUN apt-get update && apt-get install -y \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy the binary
+COPY --from=builder /app/target/release/remotefs-relay /app/remotefs-relay
+
+# Create directories
+RUN mkdir -p /app/config /app/test-results
+
+# Health check script
+RUN echo '#!/bin/bash\ncurl -f http://localhost:8080/health || exit 1' > /app/healthcheck.sh
+RUN chmod +x /app/healthcheck.sh
+
+EXPOSE 8080 8081
+
+CMD ["/app/remotefs-relay", "--config", "/app/config/relay.toml"]

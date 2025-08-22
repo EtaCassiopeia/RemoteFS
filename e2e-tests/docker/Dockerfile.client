@@ -1,0 +1,50 @@
+# Test Client Dockerfile
+FROM rust:1.75 as builder
+
+WORKDIR /app
+COPY . .
+
+# Build the client
+RUN cargo build --release --bin remotefs-client
+
+# Runtime image
+FROM ubuntu:22.04
+
+RUN apt-get update && apt-get install -y \
+    fuse3 \
+    curl \
+    git \
+    jq \
+    tree \
+    vim \
+    python3 \
+    python3-pip \
+    nodejs \
+    npm \
+    procps \
+    psmisc \
+    ca-certificates \
+    nfs-common \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy the binary
+COPY --from=builder /app/target/release/remotefs-client /app/remotefs-client
+
+# Create directories
+RUN mkdir -p /app/config /app/scripts /app/mount /app/test-results
+
+# Install test dependencies
+RUN pip3 install requests pytest
+
+# Make mount point accessible
+RUN chmod 777 /app/mount
+
+# Allow fuse for non-root users
+RUN echo "user_allow_other" >> /etc/fuse.conf
+
+EXPOSE 8082
+
+# Keep container running for testing
+CMD ["tail", "-f", "/dev/null"]

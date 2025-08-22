@@ -1,0 +1,115 @@
+version: '3.8'
+
+services:
+  # Relay Server - Central routing service
+  relay:
+    build:
+      context: ..
+      dockerfile: e2e-tests/docker/Dockerfile.relay
+    container_name: remotefs-relay
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    volumes:
+      - ./configs/relay.toml:/app/config/relay.toml:ro
+      - ./test-results:/app/test-results
+    environment:
+      - RUST_LOG=debug
+      - REMOTEFS_CONFIG=/app/config/relay.toml
+    networks:
+      - remotefs-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Remote Agent - Simulates a remote macOS machine
+  remote-agent:
+    build:
+      context: ..
+      dockerfile: e2e-tests/docker/Dockerfile.agent
+    container_name: remotefs-agent-macos
+    volumes:
+      - ./configs/agent.toml:/app/config/agent.toml:ro
+      - ./mock-project:/app/workspace:rw
+      - ./test-results:/app/test-results
+    environment:
+      - RUST_LOG=debug
+      - REMOTEFS_CONFIG=/app/config/agent.toml
+      - WORKSPACE_PATH=/app/workspace
+    networks:
+      - remotefs-network
+    depends_on:
+      relay:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "remotefs-agent"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # Test Client - Runs the E2E tests
+  test-client:
+    build:
+      context: ..
+      dockerfile: e2e-tests/docker/Dockerfile.client
+    container_name: remotefs-test-client
+    volumes:
+      - ./configs/client.toml:/app/config/client.toml:ro
+      - ./scripts:/app/scripts:ro
+      - ./test-results:/app/test-results:rw
+      - /tmp/remotefs-mount:/app/mount:rw
+    environment:
+      - RUST_LOG=debug
+      - REMOTEFS_CONFIG=/app/config/client.toml
+      - MOUNT_POINT=/app/mount
+      - TEST_RESULTS_DIR=/app/test-results
+    networks:
+      - remotefs-network
+    depends_on:
+      remote-agent:
+        condition: service_healthy
+    privileged: true  # Required for FUSE mounting
+    devices:
+      - /dev/fuse:/dev/fuse
+    cap_add:
+      - SYS_ADMIN
+    command: ["sleep", "infinity"]  # Keep container running for manual testing
+
+  # NFS Server - Alternative mounting method
+  nfs-server:
+    build:
+      context: ..
+      dockerfile: e2e-tests/docker/Dockerfile.nfs
+    container_name: remotefs-nfs-server
+    volumes:
+      - ./configs/nfs.toml:/app/config/nfs.toml:ro
+      - ./test-results:/app/test-results
+    environment:
+      - RUST_LOG=debug
+      - REMOTEFS_CONFIG=/app/config/nfs.toml
+    networks:
+      - remotefs-network
+    ports:
+      - "2049:2049"
+    depends_on:
+      remote-agent:
+        condition: service_healthy
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+
+networks:
+  remotefs-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  test-results:
+    driver: local
