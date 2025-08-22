@@ -5,7 +5,7 @@ name = "Remote macOS Development Machine"
 description = "Simulated macOS development environment for E2E testing"
 
 [connection]
-relay_url = "ws://relay:8081"
+relay_url = "ws://remotefs-relay:8080"
 reconnect_interval = 5
 max_reconnect_attempts = 10
 heartbeat_interval = 30

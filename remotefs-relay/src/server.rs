@@ -109,7 +109,7 @@ impl RelayServer {
     }
     
     /// Start the session cleanup background task
-    async fn start_session_cleanup(&self) {
+    fn start_session_cleanup(&self) -> tokio::task::JoinHandle<()> {
         let session_manager = Arc::clone(&self.session_manager);
         let cleanup_interval = self.config.session.cleanup_interval;
         let mut shutdown_rx = self.shutdown_rx.resubscribe();
@@ -133,11 +133,11 @@ impl RelayServer {
                     }
                 }
             }
-        });
+        })
     }
     
     /// Start the stats reporting background task
-    async fn start_stats_reporter(&self) {
+    fn start_stats_reporter(&self) -> tokio::task::JoinHandle<()> {
         let session_manager = Arc::clone(&self.session_manager);
         let message_router = Arc::clone(&self.message_router);
         let mut shutdown_rx = self.shutdown_rx.resubscribe();
@@ -166,7 +166,7 @@ impl RelayServer {
                     }
                 }
             }
-        });
+        })
     }
 }
 
