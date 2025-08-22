@@ -1,0 +1,56 @@
+# RemoteFS macOS NFS Server Configuration
+# This file configures the NFS server that makes remote filesystems mountable on macOS
+
+[server]
+# NFS server bind address (0.0.0.0 to listen on all interfaces)
+host = "127.0.0.1"
+
+# NFS server port (2049 is the standard NFS port)
+port = 2049
+
+# Enable debug logging
+debug = false
+
+# Cache directory for temporary data
+cache_dir = "/tmp/remotefs-cache"
+
+# Connection settings
+connection_timeout = 30  # seconds
+request_timeout = 120    # seconds
+max_connections = 100
+
+# RemoteFS agent endpoints to connect to
+# These are the remote machines running remotefs-agent
+agents = [
+    "ws://127.0.0.1:8080",        # Local agent
+    # "ws://remote-host:8080",    # Remote agent
+    # "wss://secure-host:8080",   # Secure WebSocket
+]
+
+[auth]
+# Enable authentication
+enabled = false
+
+# Authentication token (if using token-based auth)
+# token = "your-secure-token-here"
+
+# TLS certificate files (optional)
+# cert_file = "/path/to/cert.pem"
+# key_file = "/path/to/key.pem"
+
+[performance]
+# Enable local caching for better performance
+cache_enabled = true
+
+# Cache size in MB
+cache_size_mb = 256
+
+# Buffer sizes for I/O operations
+read_buffer_size = 65536   # 64KB
+write_buffer_size = 65536  # 64KB
+
+# Connection pool size for agents
+connection_pool_size = 10
+
+# Enable compression for network transfers
+compression_enabled = true

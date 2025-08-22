@@ -1,0 +1,42 @@
+[package]
+name = "remotefs-macos"
+version = "0.1.0"
+edition = "2021"
+description = "macOS-compatible filesystem mounting for RemoteFS using NFS protocol"
+
+[dependencies]
+# NFS server dependencies
+zerofs_nfsserve = "0.13"
+async-trait = "0.1"
+
+# Core dependencies from remotefs-common
+remotefs-common = { path = "../remotefs-common" }
+remotefs-client = { path = "../remotefs-client" }
+
+# Async runtime and networking
+tokio = { version = "1.0", features = ["full"] }
+tokio-tungstenite = "0.24"
+futures = "0.3"
+
+# Serialization and data structures
+serde = { version = "1.0", features = ["derive"] }
+bincode = "1.3"
+bytes = "1.9"
+
+# Logging and error handling
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1.0"
+thiserror = "2.0"
+
+# Configuration
+toml = "0.8"
+dirs = "5.0"
+
+# Utils
+uuid = { version = "1.17", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4.4", features = ["derive"] }
+
+[dev-dependencies]
+tempfile = "3.8"

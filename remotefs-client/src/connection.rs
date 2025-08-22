@@ -191,7 +191,7 @@ impl AgentConnection {
         
         match response {
             Ok(Ok(result)) => result,
-            Ok(Err(e)) => Err(e),
+            Ok(Err(e)) => Err(ClientError::Internal(format!("Response channel error: {}", e))),
             Err(_) => Err(ClientError::Timeout { 
                 seconds: self.connection_config.connect_timeout_ms / 1000 
             }),
@@ -270,19 +270,44 @@ impl AgentConnection {
         // Start background tasks
         let mut tasks = Vec::new();
         
+        // Clone the necessary components for the tasks
+        let agent_id = self.config.id.clone();
+        let stats = self.stats.clone();
+        let state = self.state.clone();
+        let pending_requests = self.pending_requests.clone();
+        let heartbeat_interval_ms = self.connection_config.heartbeat_interval_ms;
+        
         // Message sender task
-        tasks.push(tokio::spawn(self.message_sender_task(
-            ws_sink,
-            message_rx,
-            shutdown_rx,
-        )));
+        tasks.push(tokio::spawn(
+            Self::message_sender_task(
+                agent_id.clone(),
+                stats.clone(),
+                ws_sink,
+                message_rx,
+                shutdown_rx,
+            )
+        ));
         
         // Message receiver task  
-        tasks.push(tokio::spawn(self.message_receiver_task(ws_stream)));
+        tasks.push(tokio::spawn(
+            Self::message_receiver_task(
+                agent_id.clone(),
+                state,
+                stats,
+                pending_requests,
+                ws_stream,
+            )
+        ));
         
         // Heartbeat task
-        if self.connection_config.heartbeat_interval_ms > 0 {
-            tasks.push(tokio::spawn(self.heartbeat_task(message_tx.clone())));
+        if heartbeat_interval_ms > 0 {
+            tasks.push(tokio::spawn(
+                Self::heartbeat_task(
+                    agent_id,
+                    heartbeat_interval_ms,
+                    message_tx.clone(),
+                )
+            ));
         }
         
         Ok((message_tx, shutdown_tx, tasks))
@@ -290,7 +315,8 @@ impl AgentConnection {
     
     /// Task for sending messages to WebSocket
     async fn message_sender_task(
-        &self,
+        agent_id: String,
+        stats: Arc<RwLock<ConnectionStats>>,
         mut ws_sink: futures::stream::SplitSink<WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>, WsMessage>,
         mut message_rx: mpsc::UnboundedReceiver<Message>,
         mut shutdown_rx: oneshot::Receiver<()>,
@@ -302,20 +328,21 @@ impl AgentConnection {
                         Some(msg) => {
                             match bincode::serialize(&msg) {
                                 Ok(data) => {
+                                    let data_len = data.len();
                                     let ws_msg = WsMessage::Binary(data);
                                     if let Err(e) = ws_sink.send(ws_msg).await {
-                                        error!("Failed to send message to agent {}: {}", self.config.id, e);
+                                        error!("Failed to send message to agent {}: {}", agent_id, e);
                                         break;
                                     }
                                     
                                     // Update send stats
                                     {
-                                        let mut stats = self.stats.write().await;
-                                        stats.bytes_sent += data.len() as u64;
+                                        let mut stats_guard = stats.write().await;
+                                        stats_guard.bytes_sent += data_len as u64;
                                     }
                                 }
                                 Err(e) => {
-                                    error!("Failed to serialize message for agent {}: {}", self.config.id, e);
+                                    error!("Failed to serialize message for agent {}: {}", agent_id, e);
                                 }
                             }
                         }
@@ -323,7 +350,7 @@ impl AgentConnection {
                     }
                 }
                 _ = &mut shutdown_rx => {
-                    debug!("Shutting down message sender for agent {}", self.config.id);
+                    debug!("Shutting down message sender for agent {}", agent_id);
                     break;
                 }
             }
@@ -334,7 +361,10 @@ impl AgentConnection {
     
     /// Task for receiving messages from WebSocket
     async fn message_receiver_task(
-        &self,
+        agent_id: String,
+        state: Arc<RwLock<ConnectionState>>,
+        stats: Arc<RwLock<ConnectionStats>>,
+        pending_requests: Arc<DashMap<Uuid, ResponseWaiter>>,
         mut ws_stream: futures::stream::SplitStream<WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>>,
     ) {
         while let Some(ws_msg) = ws_stream.next().await {
@@ -344,41 +374,49 @@ impl AgentConnection {
                         Ok(message) => {
                             // Update receive stats
                             {
-                                let mut stats = self.stats.write().await;
-                                stats.messages_received += 1;
-                                stats.bytes_received += data.len() as u64;
+                                let mut stats_guard = stats.write().await;
+                                stats_guard.messages_received += 1;
+                                stats_guard.bytes_received += data.len() as u64;
                             }
                             
-                            self.handle_received_message(message).await;
+                            Self::handle_received_message_static(
+                                agent_id.clone(),
+                                pending_requests.clone(),
+                                message
+                            ).await;
                         }
                         Err(e) => {
-                            warn!("Failed to deserialize message from agent {}: {}", self.config.id, e);
+                            warn!("Failed to deserialize message from agent {}: {}", agent_id, e);
                         }
                     }
                 }
                 Ok(WsMessage::Close(_)) => {
-                    info!("WebSocket connection closed by agent {}", self.config.id);
+                    info!("WebSocket connection closed by agent {}", agent_id);
                     break;
                 }
-                Ok(WsMessage::Ping(data)) => {
-                    debug!("Received ping from agent {}", self.config.id);
+                Ok(WsMessage::Ping(_data)) => {
+                    debug!("Received ping from agent {}", agent_id);
                     // Pong is automatically handled by tungstenite
                 }
                 Ok(WsMessage::Pong(_)) => {
-                    debug!("Received pong from agent {}", self.config.id);
+                    debug!("Received pong from agent {}", agent_id);
                 }
                 Ok(_) => {
                     // Ignore other message types
                 }
                 Err(e) => {
-                    error!("WebSocket error from agent {}: {}", self.config.id, e);
+                    error!("WebSocket error from agent {}: {}", agent_id, e);
                     break;
                 }
             }
         }
         
         // Connection lost
-        self.set_state(ConnectionState::Disconnected).await;
+        let mut state_guard = state.write().await;
+        if *state_guard != ConnectionState::Disconnected {
+            debug!("Agent {} state changed: {:?} -> {:?}", agent_id, *state_guard, ConnectionState::Disconnected);
+            *state_guard = ConnectionState::Disconnected;
+        }
     }
     
     /// Handle received message
@@ -386,18 +424,43 @@ impl AgentConnection {
         let request_id = message.request_id();
         
         // Check if this is a response to a pending request
-        if let Some((_, response_tx)) = self.pending_requests.remove(&request_id) {
-            let _ = response_tx.send(Ok(message));
+        if let Some(request_id) = request_id {
+            if let Some((_, response_tx)) = self.pending_requests.remove(&request_id) {
+                let _ = response_tx.send(Ok(message));
+            }
         } else {
             // This is an unsolicited message (notification, event, etc.)
             debug!("Received unsolicited message from agent {}: {:?}", self.config.id, message);
         }
     }
     
+    /// Static version of handle_received_message for use in spawned tasks
+    async fn handle_received_message_static(
+        agent_id: String,
+        pending_requests: Arc<DashMap<Uuid, ResponseWaiter>>,
+        message: Message,
+    ) {
+        let request_id = message.request_id();
+        
+        // Check if this is a response to a pending request
+        if let Some(request_id) = request_id {
+            if let Some((_, response_tx)) = pending_requests.remove(&request_id) {
+                let _ = response_tx.send(Ok(message));
+            }
+        } else {
+            // This is an unsolicited message (notification, event, etc.)
+            debug!("Received unsolicited message from agent {}: {:?}", agent_id, message);
+        }
+    }
+    
     /// Heartbeat task to keep connection alive
-    async fn heartbeat_task(&self, message_tx: mpsc::UnboundedSender<Message>) {
+    async fn heartbeat_task(
+        agent_id: String,
+        heartbeat_interval_ms: u64,
+        message_tx: mpsc::UnboundedSender<Message>,
+    ) {
         let mut interval = tokio::time::interval(
-            Duration::from_millis(self.connection_config.heartbeat_interval_ms)
+            Duration::from_millis(heartbeat_interval_ms)
         );
         
         loop {
@@ -408,7 +471,7 @@ impl AgentConnection {
             };
             
             if message_tx.send(heartbeat).is_err() {
-                debug!("Heartbeat channel closed for agent {}", self.config.id);
+                debug!("Heartbeat channel closed for agent {}", agent_id);
                 break;
             }
         }

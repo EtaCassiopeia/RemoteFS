@@ -1,10 +1,10 @@
 [workspace]
 members = [
     "remotefs-common",
-    "remotefs-client", 
-    "remotefs-agent",
+    "remotefs-agent", 
+    "remotefs-client",
     "remotefs-relay",
-    "remotefs-fuse"
+    "remotefs-macos",
 ]
 resolver = "2"
 

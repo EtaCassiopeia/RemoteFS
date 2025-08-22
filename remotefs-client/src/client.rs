@@ -195,9 +195,12 @@ impl RemoteFsClient {
             sync,
         };
         
-        self.execute_with_retry(|connection| async move {
-            let conn = connection.lock().await;
-            let response = conn.send_request(request.clone()).await?;
+        let request = Arc::new(request);
+        self.execute_with_retry(|connection| {
+            let request = request.clone();
+            async move {
+                let conn = connection.lock().await;
+                let response = conn.send_request((*request).clone()).await?;
             
             match response {
                 Message::WriteFileResponse { 
@@ -225,6 +228,7 @@ impl RemoteFsClient {
                     "Unexpected response for write file request".to_string()
                 )),
             }
+        }
         }).await
     }
     
@@ -237,9 +241,12 @@ impl RemoteFsClient {
             path: path_str.clone(),
         };
         
-        self.execute_with_retry(|connection| async move {
-            let conn = connection.lock().await;
-            let response = conn.send_request(request.clone()).await?;
+        let request = Arc::new(request);
+        self.execute_with_retry(|connection| {
+            let request = request.clone();
+            async move {
+                let conn = connection.lock().await;
+                let response = conn.send_request((*request).clone()).await?;
             
             match response {
                 Message::ListDirectoryResponse { 
@@ -260,6 +267,7 @@ impl RemoteFsClient {
                     "Unexpected response for list directory request".to_string()
                 )),
             }
+        }
         }).await
     }
     
@@ -282,11 +290,14 @@ impl RemoteFsClient {
             follow_symlinks,
         };
         
-        self.execute_with_retry(|connection| async move {
-            let conn = connection.lock().await;
-            let response = conn.send_request(request.clone()).await?;
+        let request = Arc::new(request);
+        self.execute_with_retry(|connection| {
+            let request = request.clone();
+            async move {
+                let conn = connection.lock().await;
+                let response = conn.send_request((*request).clone()).await?;
             
-            match response {
+                match response {
                 Message::GetMetadataResponse { 
                     success: true, 
                     metadata: Some(metadata), 
@@ -304,6 +315,7 @@ impl RemoteFsClient {
                 _ => Err(ClientError::InvalidResponse(
                     "Unexpected response for get metadata request".to_string()
                 )),
+                }
             }
         }).await
     }
@@ -327,11 +339,14 @@ impl RemoteFsClient {
             mode,
         };
         
-        self.execute_with_retry(|connection| async move {
-            let conn = connection.lock().await;
-            let response = conn.send_request(request.clone()).await?;
+        let request = Arc::new(request);
+        self.execute_with_retry(|connection| {
+            let request = request.clone();
+            async move {
+                let conn = connection.lock().await;
+                let response = conn.send_request((*request).clone()).await?;
             
-            match response {
+                match response {
                 Message::CreateDirectoryResponse { 
                     success: true, 
                     .. 
@@ -349,6 +364,7 @@ impl RemoteFsClient {
                     "Unexpected response for create directory request".to_string()
                 )),
             }
+        }
         }).await
     }
     
@@ -361,11 +377,14 @@ impl RemoteFsClient {
             path: path_str.clone(),
         };
         
-        self.execute_with_retry(|connection| async move {
-            let conn = connection.lock().await;
-            let response = conn.send_request(request.clone()).await?;
+        let request = Arc::new(request);
+        self.execute_with_retry(|connection| {
+            let request = request.clone();
+            async move {
+                let conn = connection.lock().await;
+                let response = conn.send_request((*request).clone()).await?;
             
-            match response {
+                match response {
                 Message::DeleteFileResponse { 
                     success: true, 
                     .. 
@@ -383,6 +402,7 @@ impl RemoteFsClient {
                     "Unexpected response for delete file request".to_string()
                 )),
             }
+        }
         }).await
     }
     
@@ -396,11 +416,14 @@ impl RemoteFsClient {
             recursive: true,
         };
         
-        self.execute_with_retry(|connection| async move {
-            let conn = connection.lock().await;
-            let response = conn.send_request(request.clone()).await?;
+        let request = Arc::new(request);
+        self.execute_with_retry(|connection| {
+            let request = request.clone();
+            async move {
+                let conn = connection.lock().await;
+                let response = conn.send_request((*request).clone()).await?;
             
-            match response {
+                match response {
                 Message::RemoveDirectoryResponse { 
                     success: true, 
                     .. 
@@ -418,6 +441,7 @@ impl RemoteFsClient {
                     "Unexpected response for delete directory request".to_string()
                 )),
             }
+        }
         }).await
     }
     
@@ -432,11 +456,14 @@ impl RemoteFsClient {
             to_path: dest_str.clone(),
         };
         
-        self.execute_with_retry(|connection| async move {
-            let conn = connection.lock().await;
-            let response = conn.send_request(request.clone()).await?;
+        let request = Arc::new(request);
+        self.execute_with_retry(|connection| {
+            let request = request.clone();
+            async move {
+                let conn = connection.lock().await;
+                let response = conn.send_request((*request).clone()).await?;
             
-            match response {
+                match response {
                 Message::RenameResponse { 
                     success: true, 
                     .. 
@@ -454,6 +481,7 @@ impl RemoteFsClient {
                     "Unexpected response for rename request".to_string()
                 )),
             }
+        }
         }).await
     }
     
