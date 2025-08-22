@@ -1,4 +1,4 @@
-use remotefs_macos::cli;
+use remotefs_nfs::cli;
 
 #[tokio::main]
 async fn main() {

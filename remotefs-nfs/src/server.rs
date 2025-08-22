@@ -1,4 +1,4 @@
-use crate::{RemoteNfsFilesystem, MacOSConfig, Result};
+use crate::{RemoteNfsFilesystem, NfsConfig, Result};
 use remotefs_client::Client;
 use std::sync::Arc;
 use tokio::signal;
@@ -6,14 +6,14 @@ use tracing::{info, error, warn};
 use zerofs_nfsserve::tcp::{NFSTcpListener, NFSTcp};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-/// RemoteFS NFS server for macOS compatibility
+/// RemoteFS NFS server for cross-platform compatibility (Linux & macOS)
 pub struct RemoteNfsServer {
-    config: MacOSConfig,
+    config: NfsConfig,
     filesystem: Option<RemoteNfsFilesystem>,
 }
 
 impl RemoteNfsServer {
-    pub fn new(config: MacOSConfig) -> Self {
+    pub fn new(config: NfsConfig) -> Self {
         Self {
             config,
             filesystem: None,
@@ -137,12 +137,12 @@ impl Clone for RemoteNfsFilesystem {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::MacOSConfig;
+    use crate::config::NfsConfig;
     use remotefs_client::{ClientConfig, AgentConfig};
 
     #[tokio::test]
     async fn test_server_creation() {
-        let config = MacOSConfig::default();
+        let config = NfsConfig::default();
         let server = RemoteNfsServer::new(config);
         
         // Server should be created but not initialized
@@ -151,7 +151,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_server_initialization() {
-        let config = MacOSConfig::default();
+        let config = NfsConfig::default();
         let mut server = RemoteNfsServer::new(config);
         
         // Create a test client with minimal configuration

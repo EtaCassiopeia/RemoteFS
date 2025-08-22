@@ -1,12 +1,12 @@
-use crate::{MacOSConfig, RemoteNfsServer, Result};
+use crate::{NfsConfig, RemoteNfsServer, Result};
 use clap::{Parser, Subcommand};
 use remotefs_client::{Client, ClientError, ClientConfig, AgentConfig, ClientBehaviorConfig, ConnectionConfig, ReconnectionConfig, AuthConfig, AuthMethod, AuthCredentials, LoggingConfig, RetryStrategy, LoadBalancingStrategy};
 use std::path::PathBuf;
 use tracing::{info, warn};
 
 #[derive(Parser)]
-#[command(name = "remotefs-macos")]
-#[command(about = "RemoteFS macOS NFS Server - Mount remote filesystems via NFS protocol")]
+#[command(name = "remotefs-nfs")]
+#[command(about = "RemoteFS NFS Server - Mount remote filesystems via NFS protocol (Linux & macOS)")]
 #[command(version)]
 pub struct Cli {
     /// Configuration file path
@@ -107,7 +107,7 @@ impl Cli {
             "info"
         };
         
-        let filter = format!("remotefs_macos={},remotefs_client={},remotefs_common={}", log_level, log_level, log_level);
+        let filter = format!("remotefs_nfs={},remotefs_client={},remotefs_common={}", log_level, log_level, log_level);
         
         tracing_subscriber::fmt()
             .with_env_filter(
@@ -118,7 +118,7 @@ impl Cli {
     }
     
     async fn start_server(&self) -> Result<()> {
-        info!("Starting RemoteFS macOS NFS Server");
+        info!("Starting RemoteFS NFS Server");
         
         // Load configuration
         let mut config = self.load_config()?;
@@ -155,17 +155,17 @@ impl Cli {
         server.start().await
     }
     
-    fn load_config(&self) -> Result<MacOSConfig> {
+    fn load_config(&self) -> Result<NfsConfig> {
         if let Some(config_path) = &self.config {
             info!("Loading configuration from {}", config_path.display());
-            MacOSConfig::from_file(config_path)
+            NfsConfig::from_file(config_path)
         } else {
             info!("Loading default configuration");
-            Ok(MacOSConfig::load_or_default())
+            Ok(NfsConfig::load_or_default())
         }
     }
     
-    fn apply_overrides(&self, config: &mut MacOSConfig) {
+    fn apply_overrides(&self, config: &mut NfsConfig) {
         if let Some(ref host) = self.host {
             config.host = host.clone();
         }
@@ -179,7 +179,7 @@ impl Cli {
         }
     }
     
-    fn create_client_config(&self, config: &MacOSConfig) -> Result<ClientConfig> {
+    fn create_client_config(&self, config: &NfsConfig) -> Result<ClientConfig> {
         // Convert agent URLs to AgentConfig structs
         let agents: Vec<AgentConfig> = config.agents.iter().enumerate().map(|(i, url)| {
             AgentConfig {
@@ -243,16 +243,16 @@ impl Cli {
     fn handle_config(&self, action: &ConfigAction) -> Result<()> {
         match action {
             ConfigAction::Generate => {
-                MacOSConfig::create_example_config()?;
+                NfsConfig::create_example_config()?;
                 println!("Example configuration file created");
                 Ok(())
             }
             ConfigAction::Validate { path } => {
                 let config_path = path.as_ref()
                     .cloned()
-                    .unwrap_or_else(|| MacOSConfig::default_config_path());
+                    .unwrap_or_else(|| NfsConfig::default_config_path());
                     
-                let config = MacOSConfig::from_file(&config_path)?;
+                let config = NfsConfig::from_file(&config_path)?;
                 config.validate()?;
                 
                 println!("Configuration is valid: {}", config_path.display());
@@ -298,7 +298,7 @@ impl Cli {
         }
     }
     
-    async fn mount_filesystem(&self, config: &MacOSConfig, mount_point: &str) -> Result<()> {
+    async fn mount_filesystem(&self, config: &NfsConfig, mount_point: &str) -> Result<()> {
         use std::process::Command;
         
         info!("Mounting RemoteFS at {}", mount_point);
@@ -383,7 +383,7 @@ impl Cli {
     async fn check_status(&self) -> Result<()> {
         let config = self.load_config()?;
         
-        println!("RemoteFS macOS NFS Server Status");
+        println!("RemoteFS NFS Server Status");
         println!("================================");
         println!();
         

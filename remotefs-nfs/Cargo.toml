@@ -1,8 +1,16 @@
 [package]
-name = "remotefs-macos"
+name = "remotefs-nfs"
 version = "0.1.0"
 edition = "2021"
-description = "macOS-compatible filesystem mounting for RemoteFS using NFS protocol"
+description = "Cross-platform filesystem mounting for RemoteFS using NFS protocol (Linux & macOS)"
+
+[[bin]]
+name = "remotefs-nfs"
+path = "src/main.rs"
+
+[lib]
+name = "remotefs_nfs"
+path = "src/lib.rs"
 
 [dependencies]
 # NFS server dependencies

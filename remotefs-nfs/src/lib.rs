@@ -5,7 +5,7 @@ pub mod cli;
 
 pub use nfs_filesystem::RemoteNfsFilesystem;
 pub use server::RemoteNfsServer;
-pub use config::MacOSConfig;
+pub use config::NfsConfig;
 
 use remotefs_common::error::RemoteFsError;
 

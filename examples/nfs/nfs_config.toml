@@ -1,0 +1,56 @@
+# RemoteFS NFS Server Configuration
+# Cross-platform configuration for Linux and macOS
+
+[server]
+# NFS server bind address
+# Use "0.0.0.0" to listen on all interfaces, "127.0.0.1" for localhost only
+host = "0.0.0.0"
+
+# NFS server port (default NFS port is 2049)
+port = 2049
+
+# Maximum concurrent connections
+max_connections = 100
+
+# Enable debug logging
+debug = false
+
+# Path to store cache data
+cache_dir = "/tmp/remotefs-cache"
+
+# Connection timeout in seconds
+connection_timeout = 30
+
+# Request timeout in seconds
+request_timeout = 60
+
+# RemoteFS agent endpoints to connect to
+agents = [
+    "ws://127.0.0.1:8080",
+    "ws://remote-server:8080"
+]
+
+# Authentication settings
+[auth]
+enabled = true
+token = "your-secure-token-here"
+cert_file = "/path/to/ssl/cert.pem"
+key_file = "/path/to/ssl/key.pem"
+
+# Performance tuning
+[performance]
+# Enable client-side caching
+cache_enabled = true
+
+# Cache size in MB
+cache_size_mb = 512
+
+# Buffer sizes in bytes
+read_buffer_size = 131072   # 128KB
+write_buffer_size = 131072  # 128KB
+
+# Connection pool size
+connection_pool_size = 20
+
+# Enable compression for network traffic
+compression_enabled = true

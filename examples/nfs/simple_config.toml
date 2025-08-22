@@ -1,0 +1,21 @@
+# Simple RemoteFS NFS Configuration
+# Minimal setup for getting started quickly
+
+host = "127.0.0.1"
+port = 2049
+agents = ["ws://127.0.0.1:8080"]
+connection_timeout = 30
+request_timeout = 60
+max_connections = 50
+debug = false
+
+[auth]
+enabled = false
+
+[performance]
+cache_enabled = true
+cache_size_mb = 128
+read_buffer_size = 65536   # 64KB
+write_buffer_size = 65536  # 64KB
+connection_pool_size = 5
+compression_enabled = true

@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-/// Configuration for the macOS RemoteFS NFS server
+/// Configuration for the RemoteFS NFS server (cross-platform)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MacOSConfig {
+pub struct NfsConfig {
     /// NFS server bind address
     pub host: String,
     
@@ -73,7 +73,7 @@ pub struct PerformanceConfig {
     pub compression_enabled: bool,
 }
 
-impl Default for MacOSConfig {
+impl Default for NfsConfig {
     fn default() -> Self {
         Self {
             host: "127.0.0.1".to_string(),
@@ -114,7 +114,7 @@ impl Default for PerformanceConfig {
     }
 }
 
-impl MacOSConfig {
+impl NfsConfig {
     /// Load configuration from a TOML file
     pub fn from_file(path: &PathBuf) -> crate::Result<Self> {
         let content = std::fs::read_to_string(path)
@@ -155,7 +155,7 @@ impl MacOSConfig {
         dirs::config_dir()
             .unwrap_or_else(|| PathBuf::from("."))
             .join("remotefs")
-            .join("macos.toml")
+            .join("nfs.toml")
     }
     
     /// Load configuration with fallback to defaults
@@ -270,7 +270,7 @@ mod tests {
     
     #[test]
     fn test_default_config() {
-        let config = MacOSConfig::default();
+        let config = NfsConfig::default();
         assert_eq!(config.host, "127.0.0.1");
         assert_eq!(config.port, 2049);
         assert!(!config.agents.is_empty());
@@ -279,9 +279,9 @@ mod tests {
     
     #[test]
     fn test_config_serialization() {
-        let config = MacOSConfig::default();
+        let config = NfsConfig::default();
         let toml_str = config.to_toml().unwrap();
-        let parsed_config = MacOSConfig::from_toml(&toml_str).unwrap();
+        let parsed_config = NfsConfig::from_toml(&toml_str).unwrap();
         
         assert_eq!(config.host, parsed_config.host);
         assert_eq!(config.port, parsed_config.port);
@@ -290,7 +290,7 @@ mod tests {
     
     #[test]
     fn test_config_file_operations() {
-        let config = MacOSConfig::default();
+        let config = NfsConfig::default();
         let temp_file = NamedTempFile::new().unwrap();
         let temp_path = temp_file.path().to_path_buf();
         
@@ -298,7 +298,7 @@ mod tests {
         config.save_to_file(&temp_path).unwrap();
         
         // Load config
-        let loaded_config = MacOSConfig::from_file(&temp_path).unwrap();
+        let loaded_config = NfsConfig::from_file(&temp_path).unwrap();
         assert_eq!(config.host, loaded_config.host);
         assert_eq!(config.port, loaded_config.port);
     }
@@ -306,21 +306,21 @@ mod tests {
     #[test]
     fn test_config_validation() {
         // Valid config
-        let config = MacOSConfig::default();
+        let config = NfsConfig::default();
         assert!(config.validate().is_ok());
         
         // Invalid config - no agents
-        let mut invalid_config = MacOSConfig::default();
+        let mut invalid_config = NfsConfig::default();
         invalid_config.agents.clear();
         assert!(invalid_config.validate().is_err());
         
         // Invalid config - port 0
-        let mut invalid_config = MacOSConfig::default();
+        let mut invalid_config = NfsConfig::default();
         invalid_config.port = 0;
         assert!(invalid_config.validate().is_err());
         
         // Invalid config - bad agent URL
-        let mut invalid_config = MacOSConfig::default();
+        let mut invalid_config = NfsConfig::default();
         invalid_config.agents = vec!["http://invalid".to_string()];
         assert!(invalid_config.validate().is_err());
     }

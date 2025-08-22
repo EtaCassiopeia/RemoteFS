@@ -1750,7 +1750,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "remotefs-macos"
+name = "remotefs-nfs"
 version = "0.1.0"
 dependencies = [
  "anyhow",
