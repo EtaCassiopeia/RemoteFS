@@ -8,14 +8,13 @@
 
 use remotefs_client::*;
 use bytes::Bytes;
-use std::path::Path;
 use tokio;
 use tracing::{info, error};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
-    tracing_subscriber::init();
+    tracing_subscriber::fmt::init();
 
     // Create client configuration
     let config = ClientConfig {

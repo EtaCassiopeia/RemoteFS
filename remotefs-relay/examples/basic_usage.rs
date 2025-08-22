@@ -4,7 +4,7 @@ use remotefs_common::{
     error::Result,
 };
 use remotefs_relay::{server::RelayServer, auth::AuthManager};
-use tracing::{info, Level};
+use tracing::Level;
 
 /// Basic example of creating and running a RemoteFS relay server
 #[tokio::main]
