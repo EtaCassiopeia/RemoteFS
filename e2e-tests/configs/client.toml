@@ -3,7 +3,7 @@ name = "E2E Test Client"
 node_type = "Client"
 
 [connection]
-relay_url = "ws://relay:8081"
+relay_url = "ws://remotefs-relay:8080"
 connection_timeout = 10
 request_timeout = 60
 heartbeat_interval = 30

@@ -1,31 +1,61 @@
-[nfs]
-bind_address = "0.0.0.0"
+# RemoteFS NFS Server Configuration for E2E Testing
+
+# NFS server bind address
+host = "0.0.0.0"
+
+# NFS server port
 port = 2049
-mount_port = 2049
-version = 3
 
-[connection]
-relay_url = "ws://relay:8081"
-agent_id = "remote-macos-agent-001"
-connection_timeout = 10
-reconnect_interval = 5
+# Connection timeout in seconds
+connection_timeout = 30
 
-[authentication]
-method = "shared_key"
-shared_key = "test-shared-key-for-e2e"
+# Request timeout in seconds  
+request_timeout = 60
 
-[filesystem]
-root_path = "/"
-max_file_size = 104857600  # 100MB
+# Maximum number of concurrent connections
+max_connections = 100
+
+# Enable debug logging
+debug = true
+
+# Path to store temporary data
+cache_dir = "/tmp/remotefs-nfs-cache"
+
+# RemoteFS agent endpoints to connect to
+agents = [
+    "ws://remotefs-relay:8080/ws"
+]
+
+# Authentication settings
+[auth]
+# Enable authentication (disabled for testing)
+enabled = false
+
+# Authentication token (optional)
+# token = "test-token"
+
+# Path to certificate file for TLS (optional)
+# cert_file = "/tmp/cert.pem"
+
+# Path to private key file for TLS (optional)
+# key_file = "/tmp/key.pem"
+
+# Performance configuration
+[performance]
+# Enable caching
+cache_enabled = true
+
+# Cache size in MB
+cache_size_mb = 256
+
+# Read buffer size in bytes
 read_buffer_size = 1048576   # 1MB
+
+# Write buffer size in bytes
 write_buffer_size = 1048576  # 1MB
 
-[performance]
-async_writes = true
-max_concurrent_operations = 100
-cache_timeout = 30
+# Connection pool size
+connection_pool_size = 10
 
-[logging]
-level = "debug"
-enable_file_logging = true
-log_file = "/app/test-results/nfs.log"
+# Enable compression
+compression_enabled = true

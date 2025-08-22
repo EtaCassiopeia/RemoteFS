@@ -1,51 +1,120 @@
-[agent]
-node_id = "remote-macos-agent-001"
-node_type = "Agent"
-name = "Remote macOS Development Machine"
-description = "Simulated macOS development environment for E2E testing"
+# RemoteFS Agent Configuration for E2E Testing
+# Agent identifier (must be unique)
+agent_id = "remote-macos-agent-001"
 
-[connection]
-relay_url = "ws://remotefs-relay:8080"
-reconnect_interval = 5
-max_reconnect_attempts = 10
-heartbeat_interval = 30
-connection_timeout = 10
+# URL of the relay server to connect to
+relay_url = "ws://remotefs-relay:8080/ws"
 
-[authentication]
-method = "shared_key"
-shared_key = "test-shared-key-for-e2e"
-
-[filesystem]
-root_path = "/app/workspace"
-max_file_size = 104857600  # 100MB
-allowed_extensions = ["*"]  # Allow all file types for testing
-enable_compression = true
-
-[security]
-enable_encryption = false  # Disabled for local testing
-allowed_operations = [
-    "read_file",
-    "write_file", 
-    "create_directory",
-    "delete_file",
-    "delete_directory",
-    "list_directory",
-    "get_metadata",
-    "copy_file",
-    "move_file",
-    "rename_file"
+# Access control configuration
+[access]
+# List of directory paths that this agent can serve
+allowed_paths = [
+    "/app/workspace"
 ]
 
+# Paths that are read-only (optional)
+read_only_paths = []
+
+# Paths that are explicitly denied access (optional)
+denied_paths = ["/etc", "/root"]
+
+# Maximum file size that can be accessed (in bytes)
+max_file_size = 104857600  # 100MB
+
+# Whether to follow symbolic links
+follow_symlinks = true
+
+# Allowed file extensions (empty list means all extensions allowed)
+allowed_extensions = []
+
+# Denied file extensions
+denied_extensions = []
+
+# Security configuration
+[security]
+# Path to the private key file for authentication
+key_file = "/tmp/agent.key"
+
+# Path to the certificate file (optional)
+cert_file = "/tmp/agent.crt"
+
+# Enable TLS for connections (disabled for testing)
+enable_tls = false
+
+# Verify TLS certificates (disabled for testing)
+verify_certs = false
+
+# Session timeout in seconds
+session_timeout = 3600
+
+# Enable authentication
+enable_auth = true
+
+# List of allowed client certificates for mutual TLS (optional)
+allowed_clients = []
+
+# Network configuration
+[network]
+# Connection timeout in seconds
+connection_timeout = 30
+
+# Read timeout in seconds
+read_timeout = 60
+
+# Write timeout in seconds
+write_timeout = 60
+
+# Heartbeat interval in seconds
+heartbeat_interval = 30
+
+# Maximum number of reconnection attempts
+max_reconnect_attempts = 5
+
+# Base reconnection backoff time in seconds
+reconnect_backoff_base = 1
+
+# Maximum concurrent connections
+max_concurrent_connections = 10
+
+# Enable TCP keep-alive
+tcp_keepalive = true
+
+# TCP keep-alive interval in seconds
+keepalive_interval = 60
+
+# Performance configuration
 [performance]
-max_concurrent_operations = 50
-operation_timeout = 300  # 5 minutes
-buffer_size = 65536  # 64KB
+# Number of worker threads (0 = auto-detect)
+worker_threads = 0
 
+# I/O buffer size in bytes
+io_buffer_size = 65536
+
+# Enable asynchronous I/O
+async_io = true
+
+# File system cache size in MB
+fs_cache_size = 256
+
+# Enable prefetching for better performance
+enable_prefetch = true
+
+# Prefetch window size
+prefetch_window = 8
+
+# Logging configuration
 [logging]
+# Log level: trace, debug, info, warn, error
 level = "debug"
-enable_file_logging = true
-log_file = "/app/test-results/agent.log"
 
-[monitoring]
-enable_metrics = true
-metrics_interval = 60
+# Log format: plain or json
+format = "plain"
+
+# Maximum log file size in MB
+max_file_size = 100
+
+# Maximum number of log files to keep
+max_files = 5
+
+# Enable access logging
+enable_access_log = false
