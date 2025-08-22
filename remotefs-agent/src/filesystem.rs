@@ -326,6 +326,14 @@ impl FilesystemHandler {
                     .to_string();
                 
                 // Create FileMetadata for this entry
+                let file_type = if metadata.is_dir() {
+                    remotefs_common::protocol::FileType::Directory
+                } else if metadata.is_symlink() {
+                    remotefs_common::protocol::FileType::Symlink
+                } else {
+                    remotefs_common::protocol::FileType::File
+                };
+                
                 let file_metadata = FileMetadata {
                     size: metadata.len(),
                     modified: metadata.modified()
@@ -343,6 +351,7 @@ impl FilesystemHandler {
                     is_dir: metadata.is_dir(),
                     is_file: metadata.is_file(),
                     is_symlink: metadata.is_symlink(),
+                    file_type,
                     symlink_target: if metadata.is_symlink() {
                         entry_path.read_link().ok().and_then(|p| p.to_str().map(|s| s.to_string()))
                     } else {
@@ -417,6 +426,14 @@ impl FilesystemHandler {
             let metadata = path_buf.metadata()
                 .map_err(|e| RemoteFsError::FileSystem(format!("Failed to read metadata: {}", e)))?;
             
+            let file_type = if metadata.is_dir() {
+                remotefs_common::protocol::FileType::Directory
+            } else if metadata.is_symlink() {
+                remotefs_common::protocol::FileType::Symlink
+            } else {
+                remotefs_common::protocol::FileType::File
+            };
+            
             let file_metadata = FileMetadata {
                 size: metadata.len(),
                 modified: metadata.modified()
@@ -434,6 +451,7 @@ impl FilesystemHandler {
                 is_dir: metadata.is_dir(),
                 is_file: metadata.is_file(),
                 is_symlink: metadata.is_symlink(),
+                file_type,
                 symlink_target: if metadata.is_symlink() {
                     path_buf.read_link().ok().and_then(|p| p.to_str().map(|s| s.to_string()))
                 } else {

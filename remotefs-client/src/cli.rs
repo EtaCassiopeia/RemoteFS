@@ -113,7 +113,7 @@ pub async fn run(args: CliArgs) -> Result<()> {
         Commands::Read { path, output } => {
             let data = client.read_file(&path).await?;
             
-            if let Some(output_path) = output {
+            if let Some(ref output_path) = output {
                 tokio::fs::write(output_path, data).await?;
                 info!("File written to {:?}", output);
             } else {

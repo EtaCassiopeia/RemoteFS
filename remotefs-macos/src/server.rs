@@ -138,7 +138,7 @@ impl Clone for RemoteNfsFilesystem {
 mod tests {
     use super::*;
     use crate::config::MacOSConfig;
-    use remotefs_client::config::{ClientConfig, AgentConfig};
+    use remotefs_client::{ClientConfig, AgentConfig};
 
     #[tokio::test]
     async fn test_server_creation() {
